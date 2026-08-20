@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "shafthelper",
+	"version": "${version}",
+	"name": "Shaft Helper",
+	"description": "Hypixel Skyblock gemstone mineshaft calculator: breaking ticks, Bazaar coins per hour, and how many lapis corpses each shaft needs. Run /shaft in chat.",
+	"authors": [
+		"williamnoblejones-prog"
+	],
+	"contact": {
+		"sources": "https://github.com/williamnoblejones-prog/ShaftHelperMod"
+	},
+	"license": "MIT",
+	"icon": "assets/shafthelper/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.shafthelper.ShaftHelperClient"
+		],
+		"modmenu": [
+			"dev.shafthelper.mod.ModMenuIntegration"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": ">=0.155.0+26.1"
+	},
+	"mixins": [
+		{
+		"config": "shafthelper.mixins.json",
+		"environment": "client"
+		}
+  	]
+}
