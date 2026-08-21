@@ -60,6 +60,7 @@ public final class WaypointsScreen extends Screen {
   
     private int scrollOffset = 0;  
     private int contentHeight = 0;  
+    private final java.util.Set<String> collapsedGroups = new java.util.HashSet<>();
   
     private AreaDetector.Area filterArea = AreaDetector.Area.DWARVEN_MINES;  
   
@@ -144,14 +145,16 @@ public final class WaypointsScreen extends Screen {
             }  
             virtualY += GROUP_HEADER_HEIGHT;  
   
-            // --- Waypoint rows ---  
-            for (Waypoint wp : members) {  
-                int rowScreenY = viewportTop + virtualY - scrollOffset;  
-                if (isVisible(rowScreenY, ROW_HEIGHT)) {  
-                    addWaypointRow(wp, rowScreenY);  
+            // --- Waypoint rows (skipped entirely when the group is collapsed) --- 
+            if (collapsedGroups.contains(groupName)) {  
+                for (Waypoint wp : members) {  
+                    int rowScreenY = viewportTop + virtualY - scrollOffset;  
+                    if (isVisible(rowScreenY, ROW_HEIGHT)) {  
+                        addWaypointRow(wp, rowScreenY);  
+                    }  
+                    virtualY += ROW_HEIGHT + ROW_GAP;  
                 }  
-                virtualY += ROW_HEIGHT + ROW_GAP;  
-            }  
+            } 
   
             virtualY += 6; // gap between groups  
         }  
@@ -166,9 +169,21 @@ public final class WaypointsScreen extends Screen {
     private void addGroupHeader(String groupName, List<Waypoint> members, int y) {  
         int x = listX + 4;  
         int rightEdge = listX + listWidth - 4;  
-  
-        // Editable group name (renames every member's group)  
-        EditBox nameBox = new EditBox(this.font, x, y + 3, 120, FIELD_HEIGHT, Component.empty());  
+    
+        // Collapse/expand toggle (far left of the header)  
+        int arrowW = 14;  
+        boolean collapsed = !collapsedGroups.contains(groupName);  
+        addRenderableWidget(Button.builder(  
+            Component.literal(collapsed ? "\u25B6" : "\u25BC"), b -> {  
+                if (!collapsedGroups.remove(groupName)) {  
+                    collapsedGroups.add(groupName);  
+                }  
+                rebuild();  
+            }).bounds(x, y + 3, arrowW, FIELD_HEIGHT).build());  
+    
+        // Editable group name (renames every member's group) — shifted right past the arrow  
+        int nameX = x + arrowW + 4;  
+        EditBox nameBox = new EditBox(this.font, nameX, y + 3, 120, FIELD_HEIGHT, Component.empty());  
         nameBox.setMaxLength(40);  
         nameBox.setValue(groupName);  
         nameBox.setResponder(val -> {  
@@ -176,7 +191,7 @@ public final class WaypointsScreen extends Screen {
             for (Waypoint wp : members) wp.group = newName;  
             ShaftTracker.saveConfig();  
         });  
-        addRenderableWidget(nameBox);  
+        addRenderableWidget(nameBox); 
   
         // Delete-group button (top-right of the header)  
         int delW = 20;  
@@ -434,19 +449,20 @@ public final class WaypointsScreen extends Screen {
             }  
             virtualY += GROUP_HEADER_HEIGHT;  
   
-            for (Waypoint wp : entry.getValue()) {  
-                int rowScreenY = viewportTop + virtualY - scrollOffset;  
-                if (isVisible(rowScreenY, ROW_HEIGHT)) {  
-                    // color swatch to the left of the row  
-                    int sw = 4;  
-                    int top = Math.max(rowScreenY + 2, viewportTop);  
-                    int bottom = Math.min(rowScreenY + ROW_HEIGHT - 2, viewportBottom);  
-                    if (bottom > top) {  
-                        graphics.fill(listX + 2, top, listX + 2 + sw, bottom, 0xFF000000 | (wp.color & 0xFFFFFF));  
+            if (collapsedGroups.contains(entry.getKey())) {  
+                for (Waypoint wp : entry.getValue()) {  
+                    int rowScreenY = viewportTop + virtualY - scrollOffset;  
+                    if (isVisible(rowScreenY, ROW_HEIGHT)) {  
+                        int sw = 4;  
+                        int top = Math.max(rowScreenY + 2, viewportTop);  
+                        int bottom = Math.min(rowScreenY + ROW_HEIGHT - 2, viewportBottom);  
+                        if (bottom > top) {  
+                            graphics.fill(listX + 2, top, listX + 2 + sw, bottom, 0xFF000000 | (wp.color & 0xFFFFFF));  
+                        }  
                     }  
+                    virtualY += ROW_HEIGHT + ROW_GAP;  
                 }  
-                virtualY += ROW_HEIGHT + ROW_GAP;  
-            }  
+            } 
             virtualY += 6;  
         }  
     }  
