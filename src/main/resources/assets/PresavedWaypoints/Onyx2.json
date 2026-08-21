@@ -1,5 +1,5 @@
 [
-    {"group": "ONYX_2", "area": "Glacite Mineshafts"},
+    {"group": "ONYX_2", "area": "Mineshafts"},
     {"x":-194,"y":15,"z":-159,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-195,"y":19,"z":-153,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-195,"y":21,"z":-167,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

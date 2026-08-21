@@ -1,5 +1,5 @@
 [
-    {"group": "AMBE_1", "area": "Glacite Mineshafts"},
+    {"group": "AMBE_1", "area": "Mineshafts"},
     {"x":-180,"y":11,"z":-163,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-174,"y":11,"z":-159,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-164,"y":13,"z":-164,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

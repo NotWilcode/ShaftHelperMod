@@ -118,7 +118,7 @@ public class ShaftHelperClient implements ClientModInitializer {
             else if (root.isJsonObject()) elements.add(root);  
     
             String headerGroup = null;  
-            String headerIsland = "Glacite Mineshafts";  
+            String headerIsland = "Mineshafts";  
             boolean firstElement = true;  
             boolean addedAny = false;  
     

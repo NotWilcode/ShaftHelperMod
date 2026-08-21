@@ -1,5 +1,5 @@
 [
-    {"group": "*_C", "area": "Glacite Mineshafts"},
+    {"group": "*_C", "area": "Mineshafts"},
     {"x":-186,"y":6,"z":-178,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-193,"y":9,"z":-175,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-195,"y":12,"z":-183,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

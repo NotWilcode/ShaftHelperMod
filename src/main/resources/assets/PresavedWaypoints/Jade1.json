@@ -1,5 +1,5 @@
 [
-    {"group": "JADE_1", "area": "Glacite Mineshafts"},
+    {"group": "JADE_1", "area": "Mineshafts"},
     {"x":-181,"y":15,"z":-195,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-178,"y":18,"z":-194,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-180,"y":14,"z":-187,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

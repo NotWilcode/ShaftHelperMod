@@ -1,5 +1,5 @@
 [
-    {"group": "PERI_2", "area": "Glacite Mineshafts"},
+    {"group": "PERI_2", "area": "Mineshafts"},
     {"x":-191,"y":14,"z":-173,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-196,"y":14,"z":-190,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-186,"y":15,"z":-195,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

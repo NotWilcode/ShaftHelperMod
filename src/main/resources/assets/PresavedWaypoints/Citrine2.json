@@ -1,5 +1,5 @@
 [
-    {"group": "CITR_2", "area": "Glacite Mineshafts"},
+    {"group": "CITR_2", "area": "Mineshafts"},
     {"x":-120,"y":14,"z":-184,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-119,"y":11,"z":-196,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-113,"y":16,"z":-192,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

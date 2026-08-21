@@ -436,7 +436,7 @@ public final class ConfigScreen extends Screen {
             }  
     
             String headerGroup = null;  
-            String headerIsland = "Glacite Mineshafts";  
+            String headerIsland = "Mineshafts";  
             boolean firstElement = true;  
             boolean addedAny = false;  
     

@@ -1,5 +1,5 @@
 [
-    {"group": "AQUA_1", "area": "Glacite Mineshafts"},
+    {"group": "AQUA_1", "area": "Mineshafts"},
     {"x":-182,"y":20,"z":-187,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-176,"y":13,"z":-186,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-168,"y":16,"z":-178,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

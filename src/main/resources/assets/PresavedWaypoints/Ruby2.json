@@ -1,5 +1,5 @@
 [
-    {"group": "RUBY_2", "area": "Glacite Mineshafts"},
+    {"group": "RUBY_2", "area": "Mineshafts"},
     {"x":-106,"y":16,"z":-179,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-105,"y":16,"z":-186,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-105,"y":14,"z":-190,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

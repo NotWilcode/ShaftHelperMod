@@ -1,5 +1,5 @@
 [
-    {"group": "JASP_1", "area": "Glacite Mineshafts"},
+    {"group": "JASP_1", "area": "Mineshafts"},
     {"x":-176,"y":12,"z":-183,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"1"}},
     {"x":-169,"y":11,"z":-176,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"2"}},
     {"x":-167,"y":11,"z":-184,"r":0.0,"g":1.0,"b":0.0,"options":{"name":"3"}},

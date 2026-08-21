@@ -117,7 +117,7 @@ public final class WaypointsScreen extends Screen {
         String label = "Area: " + AreaDetector.getDisplayName(filterArea);  
         addRenderableWidget(Button.builder(Component.literal(label), b -> {  
             filterArea = (filterArea == AreaDetector.Area.DWARVEN_MINES)  
-                ? AreaDetector.Area.GLACITE_MINESHAFTS  
+                ? AreaDetector.Area.MINESHAFTS  
                 : AreaDetector.Area.DWARVEN_MINES;  
             scrollOffset = 0;  
             rebuild();  

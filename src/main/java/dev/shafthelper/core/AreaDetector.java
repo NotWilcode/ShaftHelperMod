@@ -13,7 +13,7 @@ public final class AreaDetector {
 
     public enum Area {
         DWARVEN_MINES,
-        GLACITE_MINESHAFTS,
+        MINESHAFTS,
         UNKNOWN
     }
 
@@ -37,7 +37,7 @@ public final class AreaDetector {
     private static Area fromName(String name) {
         String n = name.toLowerCase(Locale.ROOT);
         if (n.contains("dwarven")) return Area.DWARVEN_MINES;
-        if (n.contains("glacite")) return Area.GLACITE_MINESHAFTS;
+        if (n.contains("mineshaft")) return Area.MINESHAFTS;
         return Area.UNKNOWN;
     }
 
@@ -47,7 +47,7 @@ public final class AreaDetector {
     public static String getDisplayName(Area area) {
         return switch (area) {
             case DWARVEN_MINES -> "Dwarven Mines";
-            case GLACITE_MINESHAFTS -> "Glacite Mineshafts";
+            case MINESHAFTS -> "Mineshaft";
             case UNKNOWN -> "";
             default -> "";
         };
@@ -60,7 +60,7 @@ public final class AreaDetector {
         if (name == null) return Area.UNKNOWN;
         String n = name.toLowerCase(Locale.ROOT).trim();
         if (n.contains("dwarven")) return Area.DWARVEN_MINES;
-        if (n.contains("glacite")) return Area.GLACITE_MINESHAFTS;
+        if (n.contains("mineshaft")) return Area.MINESHAFTS;
         return Area.UNKNOWN;
     }
 
