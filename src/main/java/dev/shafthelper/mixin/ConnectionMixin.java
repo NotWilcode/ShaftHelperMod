@@ -31,8 +31,9 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
     private void shaftHelper$onReceive(ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci) {  
         if (packet instanceof ClientboundBlockChangedAckPacket ack) {  
             this.trackAck(ack.sequence());  
-        } else if (packet instanceof ClientboundSetTimePacket time) {  
-            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime(), System.nanoTime());  
+        }  
+        if (packet instanceof ClientboundSetTimePacket time) {  
+            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime());  
         }  
     }
 

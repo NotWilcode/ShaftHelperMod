@@ -20,7 +20,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import dev.shafthelper.client.EfficiencyDisplay;
 import dev.shafthelper.command.ShaftCommand;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents; 
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -35,8 +34,6 @@ public class ShaftHelperClient implements ClientModInitializer {
         extractPresets();
         ClientCommandRegistrationCallback.EVENT.register(
             (dispatcher, registryAccess) -> ShaftCommand.register(dispatcher));
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> dev.shafthelper.client.ServerStats.onWorldSwitch());  
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> dev.shafthelper.client.ServerStats.onWorldSwitch());
         ClientTickEvents.END_CLIENT_TICK.register(ShaftTracker::onEndTick);
         ClientReceiveMessageEvents.GAME.register(
             (message, overlay) -> { if (!overlay) ShaftTracker.onGameMessage(message); });

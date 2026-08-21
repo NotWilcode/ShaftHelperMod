@@ -87,16 +87,8 @@ public final class MiningCalculator implements HudElement {
             timeoutExceeded = false;
             return;
         }
-
-        ticksElapsed = client.player.tickCount - startServerTick;
-        double pingSec = ServerStats.getOneWayPing() / 1000.0;
-        double tps = ServerStats.getTps();
         
-        // Calculate ping offset based on TPS - if TPS is lower, we need to adjust timing
-        double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;
-        double pingOffset = pingSec > 0 && ticksNeeded > 0
-                ? ticksNeeded - pingSec * 20.0 * tpsFactor
-                : ticksNeeded;
+        double pingOffset = computePingOffset(ticksNeeded);  
         timeoutExceeded = ticksNeeded > 0 && ticksElapsed >= pingOffset;
 
         // Rising-edge sound alert: play once the moment it becomes ready  
@@ -131,8 +123,16 @@ public final class MiningCalculator implements HudElement {
         timeoutExceeded = false;
     }
 
-    private static final int LINE_HEIGHT = 10;  
-    private static final int LINE_COLOR = 0xFFE0E1DD;  
+    /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
+    private static double computePingOffset(double ticksNeeded) {  
+        double pingSec = ServerStats.getPing() / 1000.0;  
+        double tps = ServerStats.getTps();  
+        double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;  
+        return pingSec > 0 && ticksNeeded > 0  
+                ? ticksNeeded - pingSec * 20.0 * tpsFactor  
+                : ticksNeeded;  
+    }
+
     private static final int BACKGROUND = 0xE00D1B2A;  
     private static final int BORDER     = 0xFF1B263B;  
     private static final int EDGE = 4;
@@ -191,17 +191,13 @@ public final class MiningCalculator implements HudElement {
             // Calculate ticks needed using PingOffsetMiner formula
             ticksNeeded = Math.round(blockHardness * 30 / (actualMiningSpeed));
             
-            // Calculate timing information using ServerStats
-            int ping = (int) ServerStats.getOneWayPing();
-            double tps = ServerStats.getTps();
-            double pingSec = ping / 1000.0;
-            
-            // Calculate ping offset based on TPS - if TPS is lower, we need to adjust timing
-            double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;
-            double pingOffset = ticksNeeded - pingSec * 20.0 * tpsFactor;
-            
             // Display the information
             Font font = client.font;
+
+            // Get ping from method
+            int ping = (int) ServerStats.getPing();  
+            double tps = ServerStats.getTps();  
+            double pingOffset = computePingOffset(ticksNeeded);
             
             // Calculate width based on the text we'll display
             String displayName = skyblockBlockName.replace("skyblock:", "").replace("_gemstone", "");

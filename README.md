@@ -4,31 +4,18 @@ Hypixel Skyblock gemstone mining math, in-game. This is the Fabric mod port of
 [ShaftHelperDCBot](https://github.com/williamnoblejones-prog/ShaftHelperDCBot): the same `/shaft`
 command, run from Minecraft chat instead of Discord.
 
-- **Minecraft 26.1.x** (Mojang dropped the `1.` prefix, so "1.26.1" is version `26.1`; the mod is
-  built against `26.1.2` and runs on any `26.1` patch)
+- **Minecraft 26.1.x** (The mod is built against `26.1.2` and runs on any `26.1` patch)
 - **Fabric Loader** ≥ 0.19.3 with **Fabric API**
 - Client-side only — works on any server, since it only reads your chat command and talks to the
   Bazaar APIs.
 
-One command, two modes:
-
-- `/shaft mining_speed:… [mining_fortune:…] [pristine:…] [prices:…] [price_data:…] [price_basis:…] [benchmark:…]`
-  — breaking ticks, Bazaar coins per hour, and how many lapis corpses each gemstone shaft needs
-  before it beats a plain Jasper shaft.
-- `/shaft type:Amber lapis:3 mining_speed:… [efficiency:…] [cold_res:…]` — the one shaft you are
-  standing in: its coins per hour, how long Cold lets you stay, the coins that adds up to, and
-  whether that beats a Jasper shaft with no corpses.
-
-Options are `key:value` pairs, exactly like the Discord slash command, with tab-completion: typing
-`mi` suggests `mining_speed:` and `mining_fortune:`, and after the colon options like `type:` and
-`prices:` suggest their accepted values. Run `/shaft` before any stats are known
-for the guide, split over four pages: `/shaft help:1` what the mod does, `help:2` the corpse
-comparison, `help:3` single-shaft profit, `help:4` every option.
+Run '/shaft config' in chat to open the mod settings and get started.
+Also check out: '/shaft waypoints', '/shaft ping', '/shaft options', or '/shaft'
 
 ## Auto-read stats, HUD and config
 
 On Hypixel the mod reads **Mining Speed, Mining Fortune and Pristine straight from the tab list**
-(the Stats widget), so `/shaft` works with no arguments — anything you type explicitly still wins.
+(the Stats widget), so `/shaft` works with no arguments — anything you type pulls from a pre-saved config.
 The **HUD overlay** shows what `/shaft` answers, always on screen: each gemstone (in its chat
 color) ranked by profit with the lapis corpses it needs to out-earn the benchmark (Jasper by
 default) or "skip", using Bazaar prices refreshed every 10 minutes. It also spots the mineshaft
@@ -103,8 +90,8 @@ minutes in shaft = seconds per Cold × 100 ÷ 60      (100 Cold kicks you out)
 shaft profit     = coins/hr × hours in shaft × efficiency
 ```
 
-Cold Resistance caps at 123.5, which is 11.2s per Cold and 18.6 minutes in a shaft. `efficiency`
-(default 80%) is the share of that time actually spent breaking blocks rather than walking, looting
+Cold Resistance caps at 138.5, which is 11.9s per Cold and 19.875 minutes in a shaft. `efficiency`
+(default 70%) is the share of that time actually spent breaking blocks rather than walking, looting
 corpses or opening the next room.
 
 ## Prices
@@ -137,16 +124,6 @@ Two further defences against Bazaar manipulation:
 ## Installation
 
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for Minecraft 26.1.x.
-2. Drop [Fabric API](https://modrinth.com/mod/fabric-api) and the Shaft Helper jar into your
+2. Drop [Fabric API](https://modrinth.com/mod/fabric-api) and the [Shaft Helper](https://github.com/NotWilcode/ShaftHelperMod/releases/) jar into your
    `mods/` folder.
 3. Join Hypixel and run `/shaft` in chat.
-
-## Development
-
-```bash
-./gradlew build    # compiles the mod and runs the unit tests; jar lands in build/libs/
-./gradlew test     # JUnit unit tests only
-./gradlew runClient  # launch a dev client with the mod loaded
-```
-
-Requires Java 25 (what Minecraft 26.1 itself runs on).

@@ -1,7 +1,6 @@
 package dev.shafthelper.client;
 
 import dev.shafthelper.config.ModConfig;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -15,8 +14,6 @@ import net.minecraft.network.chat.Component;
  */
 public final class NetworkTracker implements HudElement {
 
-    private static final int UPDATE_INTERVAL = 20; // Update every second (20 ticks)
-    private static int tickCounter = 0;
     private static boolean initialized = false;
             
     static final int BOX_W = 110;
@@ -26,13 +23,8 @@ public final class NetworkTracker implements HudElement {
     public static void register() {
         if (!initialized) {
             ServerStats.init();
-            ClientTickEvents.END_CLIENT_TICK.register(NetworkTracker::onTick);
             initialized = true;
         }
-    }
-
-    private static void onTick(Minecraft client) {
-        tickCounter++;
     }
 
     public static float getCurrentTPS() {
@@ -40,7 +32,7 @@ public final class NetworkTracker implements HudElement {
     }
 
     public static int getCurrentPing() {
-        return (int) ServerStats.getOneWayPing();
+        return (int) ServerStats.getPing();
     }
 
     public static void setPing(int ping) {
