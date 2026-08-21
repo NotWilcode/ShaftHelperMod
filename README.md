@@ -9,8 +9,8 @@ command, run from Minecraft chat instead of Discord.
 - Client-side only — works on any server, since it only reads your chat command and talks to the
   Bazaar APIs.
 
-Run '/shaft config' in chat to open the mod settings and get started.
-Also check out: '/shaft waypoints', '/shaft ping', '/shaft options', or '/shaft'
+Run `/shaft config` in chat to open the mod settings and get started.
+Also check out: `/shaft waypoints`, `/shaft ping`, `/shaft options`, or `/shaft`
 
 ## Auto-read stats, HUD and config
 

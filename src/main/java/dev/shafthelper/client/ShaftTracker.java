@@ -12,12 +12,14 @@ import dev.shafthelper.core.ProcTracker;
 import dev.shafthelper.core.ShaftDetector;
 import dev.shafthelper.core.ShaftLog;
 import dev.shafthelper.core.StatsParser;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -29,6 +31,9 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.DisplaySlot;  
+import net.minecraft.world.scores.Objective;  
+import net.minecraft.world.scores.PlayerScoreEntry;
 
 /**
  * Scans the tab list and scoreboard every couple of seconds: reads mining stats from Hypixel's
@@ -158,17 +163,35 @@ public final class ShaftTracker {
         return currentLapisCorpses;
     }
 
-    private static List<String> collectLines(Minecraft client, ClientPacketListener connection) {
-        List<String> lines = new ArrayList<>();
-        for (PlayerInfo info : connection.getListedOnlinePlayers()) {
-            Component name = info.getTabListDisplayName();
-            lines.add(name != null ? name.getString() : info.getProfile().name());
-        }
-        Scoreboard scoreboard = client.level.getScoreboard();
-        for (PlayerTeam team : scoreboard.getPlayerTeams()) {
-            lines.add(team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString());
-        }
-        return lines;
+    private static List<String> collectLines(Minecraft client, ClientPacketListener connection) {  
+        List<String> lines = new ArrayList<>();  
+    
+        // Tab list (unchanged)  
+        for (PlayerInfo info : connection.getListedOnlinePlayers()) {  
+            Component name = info.getTabListDisplayName();  
+            lines.add(name != null ? name.getString() : info.getProfile().name());  
+        }  
+    
+        Scoreboard scoreboard = client.level.getScoreboard();  
+    
+        // Sidebar objective: rebuild each line as prefix + entryName + suffix  
+        Objective sidebar = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);  
+        if (sidebar != null) {  
+            for (PlayerScoreEntry entry : scoreboard.listPlayerScores(sidebar)) {  
+                String owner = entry.owner();  
+                PlayerTeam team = scoreboard.getPlayersTeam(owner);  
+                // formatNameForTeam applies prefix + name + suffix exactly like vanilla renders it  
+                String full = PlayerTeam.formatNameForTeam(team, Component.literal(owner)).getString();  
+                lines.add(full);  
+            }  
+        }  
+    
+        // Fallback: keep the old team prefix+suffix scan so tab/team-based servers still work  
+        for (PlayerTeam team : scoreboard.getPlayerTeams()) {  
+            lines.add(team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString());  
+        }  
+    
+        return lines;  
     }
 
     private static void readStats(List<String> lines) {

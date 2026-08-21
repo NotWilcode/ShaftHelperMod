@@ -44,6 +44,8 @@ dependencies {
 
 	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
 
+	implementation "maven.modrinth:YL57xq9U:5H9TsVy4"
+
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

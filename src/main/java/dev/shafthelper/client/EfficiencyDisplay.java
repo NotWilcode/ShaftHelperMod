@@ -1,12 +1,12 @@
 package dev.shafthelper.client;
 
+import dev.shafthelper.config.ModConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import dev.shafthelper.config.ModConfig;
 
 /**
  * Displays mining efficiency information similar to PingOffsetMiner.
@@ -40,10 +40,15 @@ public final class EfficiencyDisplay implements HudElement {
         blocksMined++;
     }
     
-    public static void onBlockExpected() {
-        if (isMining()) {
-            expectedBlocks++;
-        }
+    public static void onBlockExpected() {  
+        long now = System.currentTimeMillis();  
+        if (!isMining()) {  
+            timeStarted = now;  
+            blocksMined = 0;  
+            expectedBlocks = 0;  
+        }  
+        lastMineTime = now;   // keep the session alive while looking at gemstones  
+        expectedBlocks++;  
     }
     
     private static boolean isMining() {

@@ -1,58 +1,76 @@
-package dev.shafthelper.mixin;  
-  
+package dev.shafthelper.mixin;
+
 import dev.shafthelper.network.NetworkSequenceTracker;
 import io.netty.channel.ChannelHandlerContext;
-import net.minecraft.network.protocol.Packet;  
-import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket;  
-import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
-import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;  
-import net.minecraft.network.Connection;  
-import org.spongepowered.asm.mixin.Mixin;  
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.core.BlockPos;
+import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;  
-import org.spongepowered.asm.mixin.injection.Inject;  
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;  
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import java.util.concurrent.ConcurrentHashMap;
 
-@Mixin(Connection.class)  
-public abstract class ConnectionMixin implements NetworkSequenceTracker {  
-  
-    @Unique
-    private final ConcurrentHashMap<Integer, Long> shaftHelper$pendingActions = new ConcurrentHashMap<>();
+@Mixin(Connection.class)
+public abstract class ConnectionMixin implements NetworkSequenceTracker {
 
-    @Inject(method = "send", at = @At("HEAD"))  
-    private void shaftHelper$onSend(Packet<?> packet, CallbackInfo ci) {  
-        if (packet instanceof ServerboundPlayerActionPacket action) {  
-            this.trackSent(action.getSequence());
-        }  
-    }  
-  
-    @Inject(method = "channelRead0", at = @At("HEAD"))  
-    private void shaftHelper$onReceive(ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci) {  
-        if (packet instanceof ClientboundBlockChangedAckPacket ack) {  
-            this.trackAck(ack.sequence());  
-        }  
-        if (packet instanceof ClientboundSetTimePacket time) {  
-            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime());  
-        }  
+    @Unique
+    private final ConcurrentHashMap<Integer, Long> shaftHelper$pendingActions =
+            new ConcurrentHashMap<>();
+
+    @Inject(method = "send", at = @At("HEAD"))
+    private void shaftHelper$onSend(Packet<?> packet, CallbackInfo ci) {
+        if (packet instanceof ServerboundPlayerActionPacket action) {
+            trackSent(action.getSequence());
+        }
+    }
+
+    @Inject(method = "channelRead0", at = @At("HEAD"))
+    private void shaftHelper$onReceive(
+            ChannelHandlerContext ctx,
+            Packet<?> packet,
+            CallbackInfo ci
+    ) {
+        if (packet instanceof ClientboundBlockChangedAckPacket ack) {
+            trackAck(ack.sequence());
+        }
+
+        if (packet instanceof ClientboundBlockUpdatePacket update) {
+            BlockPos tracked = dev.shafthelper.client.MiningCalculator.getCurrentBlock();
+
+            if (tracked != null
+                    && update.getPos().equals(tracked)
+                    && update.getBlockState().isAir()) {
+                dev.shafthelper.client.MiningCalculator.onBlockMined();
+                dev.shafthelper.client.EfficiencyDisplay.onBlockMined();
+            }
+        }
     }
 
     @Override
     public void trackSent(int sequence) {
-        shaftHelper$pendingActions.put(sequence, System.nanoTime());  
-        if (shaftHelper$pendingActions.size() > 64) 
-            shaftHelper$pendingActions.clear(); 
+        shaftHelper$pendingActions.put(sequence, System.nanoTime());
+
+        if (shaftHelper$pendingActions.size() > 64) {
+            shaftHelper$pendingActions.clear();
+        }
     }
 
     @Override
     public void trackAck(int sequence) {
-        Long sent = shaftHelper$pendingActions.remove(sequence);  
-        if (sent == null) return;  
-        
-        long rtt = Math.round((System.nanoTime() - sent) / 1_000_000.0);  
+        Long sent = shaftHelper$pendingActions.remove(sequence);
+        if (sent == null) {
+            return;
+        }
+
+        long rtt = Math.round((System.nanoTime() - sent) / 1_000_000.0);
+
         if (rtt > 0 && rtt < 2000) {
-            // This call is now safe because trackAck will only ever run 
-            // when connected to Hypixel, long after the game successfully booted!
             dev.shafthelper.client.ServerStats.addPing(rtt);
         }
     }

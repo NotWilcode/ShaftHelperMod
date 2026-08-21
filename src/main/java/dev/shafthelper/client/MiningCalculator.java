@@ -77,30 +77,52 @@ public final class MiningCalculator implements HudElement {
         }
     }
     
-    private static void onTick(Minecraft client) {
-        if (client.player == null) return;
-
-        // Reset if not actively mining a tracked block
-        if (!client.options.keyAttack.isDown() || currentBlock == null) {
-            ticksElapsed = 0;
-            startServerTick = client.player.tickCount;
-            timeoutExceeded = false;
-            return;
-        }
-        
+    private static void onTick(Minecraft client) {  
+        if (client.player == null || client.level == null) return;  
+        Player player = client.player;  
+    
+        // Detect the block being looked at (runs regardless of HUD visibility)  
+        BlockPos blockPos = null;  
+        Integer blockHardness = null;  
+        HitResult hit = player.pick(4.5, 0.0f, false);  
+        if (hit != null && hit.getType() == HitResult.Type.BLOCK) {  
+            blockPos = ((BlockHitResult) hit).getBlockPos();  
+            Block block = client.level.getBlockState(blockPos).getBlock();  
+            blockHardness = BLOCK_HARDNESSES.get(getSkyblockBlockName(block));  
+        }  
+    
+        // Not actively mining a tracked block -> reset  
+        if (!client.options.keyAttack.isDown() || blockHardness == null) {  
+            ticksElapsed = 0;  
+            startServerTick = player.tickCount;  
+            timeoutExceeded = false;  
+            currentBlock = blockPos;  
+            return;  
+        }  
+    
+        // New tracked block -> start timing and count it as expected  
+        if (blockPos != null && !blockPos.equals(currentBlock)) {  
+            currentBlock = blockPos;  
+            startServerTick = player.tickCount;  
+            ticksElapsed = 0;  
+            timeoutExceeded = false;  
+            EfficiencyDisplay.onBlockExpected();  
+        }  
+    
+        ModConfig config = ShaftTracker.config();  
+        double actualMiningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;  
+        ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);  
+    
+        ticksElapsed = player.tickCount - startServerTick;  
         double pingOffset = computePingOffset(ticksNeeded);  
-        timeoutExceeded = ticksNeeded > 0 && ticksElapsed >= pingOffset;
-
-        // Rising-edge sound alert: play once the moment it becomes ready  
+        timeoutExceeded = ticksNeeded > 0 && ticksElapsed >= pingOffset;  
+    
         if (timeoutExceeded && !wasTimeoutExceeded && ShaftTracker.config().pingSoundAlert) {  
             client.getSoundManager().play(  
                 net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(  
-                    net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING,  
-                    2.0f // pitch (higher = more noticeable); volume defaults to 0.25  
-                )  
-            );  
+                    net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING, 2.0f));  
         }  
-        wasTimeoutExceeded = timeoutExceeded;
+        wasTimeoutExceeded = timeoutExceeded;  
     }
     
     // Public getters for TickDisplay
@@ -121,6 +143,10 @@ public final class MiningCalculator implements HudElement {
         ticksElapsed = 0;
         startServerTick = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.tickCount : 0;
         timeoutExceeded = false;
+    }
+
+    public static BlockPos getCurrentBlock() {  
+        return currentBlock;  
     }
 
     /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
