@@ -164,26 +164,40 @@ public final class WaypointsScreen extends Screen {
   
     private boolean isVisible(int screenY, int rowHeight) {  
         return screenY + rowHeight > viewportTop && screenY < viewportBottom;  
-    }  
-  
+    }
+
     private void addGroupHeader(String groupName, List<Waypoint> members, int y) {  
         int x = listX + 4;  
         int rightEdge = listX + listWidth - 4;  
     
-        // Collapse/expand toggle (far left of the header)  
+        // --- Show/hide checkbox (toggles enabled on every member) ---  
         int arrowW = 14;  
-        boolean collapsed = !collapsedGroups.contains(groupName);  
+        boolean collapsed = collapsedGroups.contains(groupName);  
         addRenderableWidget(Button.builder(  
             Component.literal(collapsed ? "\u25B6" : "\u25BC"), b -> {  
                 if (!collapsedGroups.remove(groupName)) {  
                     collapsedGroups.add(groupName);  
                 }  
                 rebuild();  
-            }).bounds(x, y + 3, arrowW, FIELD_HEIGHT).build());  
+            })
+            .bounds(x, y + 3, arrowW, FIELD_HEIGHT).build()
+        );  
+        x += arrowW + 4;
+            
+        // Group counts as "on" only if all its members are enabled.  
+        boolean groupEnabled = !members.isEmpty() && members.stream().allMatch(w -> w.enabled);  
+        int cbW = 20;  
+        addRenderableWidget(Button.builder(  
+                Component.literal(groupEnabled ? "[x]" : "[ ]"), b -> {  
+            boolean turnOn = !groupEnabled;          // flip based on current state  
+            for (Waypoint wp : members) wp.enabled = turnOn;  
+            ShaftTracker.saveConfig();  
+            rebuild();  
+        }).bounds(x, y + 3, cbW, FIELD_HEIGHT).build());  
+        x += cbW + 4; // shift the name box to the right of the checkbox  
     
-        // Editable group name (renames every member's group) — shifted right past the arrow  
-        int nameX = x + arrowW + 4;  
-        EditBox nameBox = new EditBox(this.font, nameX, y + 3, 120, FIELD_HEIGHT, Component.empty());  
+        // Editable group name (renames every member's group)  
+        EditBox nameBox = new EditBox(this.font, x, y + 3, 120, FIELD_HEIGHT, Component.empty());  
         nameBox.setMaxLength(40);  
         nameBox.setValue(groupName);  
         nameBox.setResponder(val -> {  
@@ -481,9 +495,9 @@ public final class WaypointsScreen extends Screen {
                 |  (int)(s.b * 255);  
         Waypoint wp = new Waypoint();  
         wp.name = (s.options != null) ? s.options.name : null;  
-        wp.x = (int) Math.round(-s.x);   // un-negate  
+        wp.x = (int) Math.round(s.x);  
         wp.y = (int) Math.round(s.y);  
-        wp.z = (int) Math.round(-s.z);   // un-negate  
+        wp.z = (int) Math.round(s.z);
         wp.color = color;  
         wp.enabled = true;  
         wp.group = "Imported";

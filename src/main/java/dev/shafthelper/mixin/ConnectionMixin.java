@@ -7,6 +7,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,11 +32,7 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
     }
 
     @Inject(method = "channelRead0", at = @At("HEAD"))
-    private void shaftHelper$onReceive(
-            ChannelHandlerContext ctx,
-            Packet<?> packet,
-            CallbackInfo ci
-    ) {
+    private void shaftHelper$onReceive( ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci ) {
         if (packet instanceof ClientboundBlockChangedAckPacket ack) {
             trackAck(ack.sequence());
         }
@@ -50,6 +47,9 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
                 dev.shafthelper.client.EfficiencyDisplay.onBlockMined();
             }
         }
+        if (packet instanceof ClientboundSetTimePacket time) {  
+            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime());  
+        }  
     }
 
     @Override

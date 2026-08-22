@@ -20,7 +20,7 @@ public final class Waypoint {
     public Waypoint() {
         // Default constructor for Gson
         this.id = UUID.randomUUID().toString();
-        this.enabled = true;
+        this.enabled = false;
         this.color = 0xFF0000; // Default red
     }
 

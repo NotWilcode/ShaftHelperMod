@@ -26,7 +26,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 
 public final class WaypointRenderer {  
-    private static final int MAX_RENDER_DISTANCE = 64;  
+    private static final int MAX_RENDER_DISTANCE = 100000;  
     private static boolean initialized = false;  
     private static final List<Waypoint> visibleWaypoints = new ArrayList<>();  
     private static final RenderType THROUGH_LINES = WaypointRenderTypeFactory.createThroughLines();
@@ -138,16 +138,11 @@ public final class WaypointRenderer {
         Optional<AreaDetector.Area> currentArea = ShaftTracker.currentArea();  
         String currentIsland = AreaDetector.getDisplayName(currentArea.orElse(AreaDetector.Area.UNKNOWN));  
 
-        String shaftCode = ShaftTracker.currentShaft()  
-            .map(dev.shafthelper.core.ShaftDetector.Shaft::code)  
-            .orElse("");
-  
         for (Waypoint waypoint : config.waypoints) {  
             if (!waypoint.enabled) continue;  
             if (!waypoint.island.isEmpty()) {  
                 if (!waypoint.island.equalsIgnoreCase(currentIsland)) continue;  
             }  
-            if (!groupMatchesShaft(waypoint.group, shaftCode)) continue;
             double distance = waypoint.distanceTo(  
                 player.getBlockX(),  
                 player.getBlockY(),  
@@ -158,7 +153,7 @@ public final class WaypointRenderer {
         }  
     } 
 
-    private static boolean groupMatchesShaft(String group, String shaftCode) {  
+    public static boolean groupMatchesShaft(String group, String shaftCode) {  
         // No group -> always show (island-only, backward compatible)  
         if (group == null || group.isEmpty()) return true;  
     

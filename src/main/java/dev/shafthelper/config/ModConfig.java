@@ -45,6 +45,7 @@ public final class ModConfig {
     public boolean profitEnabled = true;
     public boolean enableDustParticles = true;
     public boolean enableDebugOverlay = false;
+    public boolean enableNetwork = true;
     public boolean presetsAutoImported = false;
     
     /** HUD position as a percent of the screen: 0 = left/top edge, 100 = right/bottom edge. */

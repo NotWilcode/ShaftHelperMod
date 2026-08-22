@@ -17,7 +17,7 @@ public final class AreaDetector {
         UNKNOWN
     }
 
-    // Matches "Area: Dwarven Mines", "Area: Glacite Mineshafts", etc. Case-insensitive.
+    // Matches "Area: Dwarven Mines", "Area: Mineshafts", etc. Case-insensitive.
     private static final Pattern AREA_PATTERN = Pattern.compile("(?i)Area:\\s*(.+)$");
 
     /**

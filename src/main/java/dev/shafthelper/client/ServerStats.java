@@ -21,7 +21,6 @@ public class ServerStats {
     private static boolean initialized = false;  
   
     public static void init() {  
-        if (initialized) return;  
         initialized = true;  
         // No client-tick registration needed anymore; TPS comes from server time packets.  
     }  
@@ -58,7 +57,8 @@ public class ServerStats {
             long ticksElapsed = gameTime - lastServerGameTime;  
             double secondsElapsed = (now - lastServerTimeWallClock) / 1000.0;  
             if (ticksElapsed > 0 && secondsElapsed > 0) {  
-                currentServerTps = Math.max(0.0, Math.min(20.0, ticksElapsed / secondsElapsed));  
+                double tps = ticksElapsed / secondsElapsed;
+                currentServerTps = Math.max(0.0, Math.min(20.0, tps));  
             }  
         }  
         lastServerGameTime = gameTime;  
@@ -67,7 +67,8 @@ public class ServerStats {
   
     /** Current server TPS. Returns 20.0 during the warm-up window after a world switch. */  
     public static double getTps() {  
-        if (System.currentTimeMillis() - lastWorldSwitchTime < 5000) {  
+        long now = System.currentTimeMillis();
+        if (now - lastWorldSwitchTime < 5000) {  
             return 20.0;  
         }  
         return currentServerTps;  

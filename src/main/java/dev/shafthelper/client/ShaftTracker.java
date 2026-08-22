@@ -147,6 +147,8 @@ public final class ShaftTracker {
             detectedShaft = Optional.empty();
         }
 
+        applyMineshaftGroupToggle();
+
         if (config.trackerEnabled && config.miningSpeed > 0) refreshPrices();
             refreshHudLines();
     }
@@ -432,6 +434,26 @@ public final class ShaftTracker {
             .orElseThrow();
         double effectivePristine = config.pristine + lapisCorpses;
         return Mining.coinsPerHour(shaftBreakdown, prices, effectivePristine);
+    }
+
+    private static void applyMineshaftGroupToggle() {  
+        if (config == null) return;  
+    
+        // Only auto-toggle inside Mineshafts; leave Dwarven/island-only groups alone.  
+        if (detectedArea.orElse(AreaDetector.Area.UNKNOWN) != AreaDetector.Area.MINESHAFTS) return;  
+    
+        String shaftCode = detectedShaft.map(ShaftDetector.Shaft::code).orElse("");  
+        boolean changed = false;  
+        for (dev.shafthelper.core.Waypoint wp : config.waypoints) {  
+            // Only touch shaft-scoped groups (those with an underscore, e.g. TOPA_1).  
+            if (wp.group == null || wp.group.lastIndexOf('_') < 0) continue;  
+            boolean shouldEnable = WaypointRenderer.groupMatchesShaft(wp.group, shaftCode);  
+            if (wp.enabled != shouldEnable) {  
+                wp.enabled = shouldEnable;  
+                changed = true;  
+            }  
+        }  
+        if (changed) saveConfig();  
     }
 
     private ShaftTracker() {}

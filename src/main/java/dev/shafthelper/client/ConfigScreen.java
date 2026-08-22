@@ -229,6 +229,12 @@ public final class ConfigScreen extends Screen {
             config.enableDebugOverlay, v -> config.enableDebugOverlay = v)));  
         addLabel("Debug overlay", y);  
         y += ROW_HEIGHT;  
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
+            config.enableNetwork, v -> config.enableNetwork = v)));  
+        addLabel("Network overlay", y);  
+        y += ROW_HEIGHT;  
     
         return y;  
     }  
@@ -503,9 +509,9 @@ public final class ConfigScreen extends Screen {
                 |  (int)(s.b * 255);  
         Waypoint wp = new Waypoint();  
         wp.name = (s.options != null) ? s.options.name : null;  
-        wp.x = (int) Math.round(-s.x);  
+        wp.x = (int) Math.round(s.x);  
         wp.y = (int) Math.round(s.y);  
-        wp.z = (int) Math.round(-s.z);  
+        wp.z = (int) Math.round(s.z);  
         wp.color = color;  
         wp.enabled = true;  
         wp.setId(UUID.randomUUID().toString());  

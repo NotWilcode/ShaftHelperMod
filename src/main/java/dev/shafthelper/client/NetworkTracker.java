@@ -75,7 +75,7 @@ public final class NetworkTracker implements HudElement {
             pingText = String.format("Ping: %dms", currentPing);
             pingColor = currentPing <= 100 ? 0xFF90EE90 : (currentPing <= 200 ? 0xFFFFFF00 : 0xFFFF6347);
         }
-        graphics.text(font, Component.literal(pingText), x + 5, y + 15, pingColor, true);
+        if (config.enableNetwork) { graphics.text(font, Component.literal(pingText), x + 5, y + 15, pingColor, true); }
     }
 
     static int position(double percent, int screen, int size) {
