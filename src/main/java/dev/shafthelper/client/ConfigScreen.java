@@ -174,7 +174,7 @@ public final class ConfigScreen extends Screen {
     private int contentHeightFor(Tab t) {  
         int rows = switch (t) {  
             case STATS -> 9;  
-            case HUD -> 5;  
+            case HUD -> 6;  
             case OPTIONS -> 4;  
             case WAYPOINTS -> 3;  
         };  
