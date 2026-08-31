@@ -43,11 +43,12 @@ public final class NetworkTracker implements HudElement {
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft client = Minecraft.getInstance();
         if (client.getDebugOverlay().showDebugScreen()) return;
+        ModConfig config = ShaftTracker.config();
+        if (!config.enableNetwork) return; 
         
         Font font = client.font;
 
         // Ensure you match the exact instance accessor pattern your project config uses
-        ModConfig config = ShaftTracker.config();
         int x = position(config.netX, graphics.guiWidth(), BOX_W);
         int y = position(config.netY, graphics.guiHeight(), BOX_H);
         
@@ -75,7 +76,7 @@ public final class NetworkTracker implements HudElement {
             pingText = String.format("Ping: %dms", currentPing);
             pingColor = currentPing <= 100 ? 0xFF90EE90 : (currentPing <= 200 ? 0xFFFFFF00 : 0xFFFF6347);
         }
-        if (config.enableNetwork) { graphics.text(font, Component.literal(pingText), x + 5, y + 15, pingColor, true); }
+        graphics.text(font, Component.literal(pingText), x + 5, y + 15, pingColor, true);
     }
 
     static int position(double percent, int screen, int size) {

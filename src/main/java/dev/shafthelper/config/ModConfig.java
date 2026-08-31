@@ -47,6 +47,10 @@ public final class ModConfig {
     public boolean enableDebugOverlay = false;
     public boolean enableNetwork = true;
     public boolean presetsAutoImported = false;
+    public boolean orderedWaypointsEnabled = true;
+
+    public double orderedDistance = 2.0;
+    public double orderedChunks = 64;
     
     /** HUD position as a percent of the screen: 0 = left/top edge, 100 = right/bottom edge. */
     public double trackerX = 0;  

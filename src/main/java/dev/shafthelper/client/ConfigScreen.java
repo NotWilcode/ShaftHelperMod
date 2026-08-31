@@ -99,7 +99,7 @@ public final class ConfigScreen extends Screen {
         statLabels = new String[] {  
             "Mining Speed", "Mining Fortune", "Gemstone Fortune", "Gemstone Spread", "Proffesional Level (max 140)", "Pristine",  
             "Cold Resistance (max " + Cold.MAX_COLD_RESISTANCE + ")",  
-            "Efficiency % (default " + (int) Cold.DEFAULT_EFFICIENCY + ")"  
+            "Efficiency % (default " + (int) Cold.DEFAULT_EFFICIENCY + ")", "Ordered Waypoint Skip Distance", "Ordered Waypoint Render Distance"
         };  
         int maxLabelW = 0;  
         for (String s : statLabels) maxLabelW = Math.max(maxLabelW, this.font.width(s));  
@@ -176,7 +176,7 @@ public final class ConfigScreen extends Screen {
             case STATS -> 9;  
             case HUD -> 6;  
             case OPTIONS -> 4;  
-            case WAYPOINTS -> 3;  
+            case WAYPOINTS -> 6;  
         };  
         return HEADER_HEIGHT + rows * ROW_HEIGHT;  
     }  
@@ -301,6 +301,15 @@ public final class ConfigScreen extends Screen {
         tabContent.add(addRenderableWidget(importBtn));  
         addLabel("Import selected preset", y);  
         y += ROW_HEIGHT;  
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
+            config.orderedWaypointsEnabled, v -> config.orderedWaypointsEnabled = v)));  
+        addLabel("Ordered Waypoints", y);  
+        y += ROW_HEIGHT;  
+        
+        y = labeledDouble(statLabels[8], y, config.orderedDistance, 1, 100, v -> config.orderedDistance = v);
+        y = labeledDouble(statLabels[9], y, config.orderedChunks, 1, 100, v -> config.orderedChunks = v);
     
         return y;   
     }  

@@ -122,7 +122,7 @@ public final class ShaftTracker {
         detectedArea = AreaDetector.detect(lines);
   
         if (detectedShaft.isPresent() && (currentLapisCorpses >= 0 || currentUmberCorpses >= 0 || currentTungstenCorpses >= 0)) {  
-        LOG.updateCurrentCorpses(currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses);  
+            LOG.updateCurrentCorpses(currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses);  
         }
 
         Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);

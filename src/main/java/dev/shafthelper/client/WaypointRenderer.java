@@ -1,7 +1,10 @@
 package dev.shafthelper.client; 
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -26,10 +29,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 
 public final class WaypointRenderer {  
-    private static final int MAX_RENDER_DISTANCE = 100000;  
+    private static final int COLOR_CURRENT = 0xFF778DA9; // green  
+    private static final int COLOR_NEXT    = 0xE00D1B2A; // yellow  
+    private static final int COLOR_PAST    = 0x90202020; // red  
+    
+    private static int activeOrderedIndex = 0;  
+    private static final Map<Waypoint, Integer> displayColors = new HashMap<>();
     private static boolean initialized = false;  
     private static final List<Waypoint> visibleWaypoints = new ArrayList<>();  
     private static final RenderType THROUGH_LINES = WaypointRenderTypeFactory.createThroughLines();
+
     public static void register() {  
         if (!initialized) {  
             ClientTickEvents.END_CLIENT_TICK.register(WaypointRenderer::onTick);  
@@ -62,10 +71,11 @@ public final class WaypointRenderer {
         VertexConsumer lineBuffer = bufferSource.getBuffer(Objects.requireNonNull(renderType));
 
         for (Waypoint wp : visibleWaypoints) {  
-            float r = ((wp.color >> 16) & 0xFF) / 255.0f;  
-            float g = ((wp.color >> 8) & 0xFF) / 255.0f;  
-            float b = (wp.color & 0xFF) / 255.0f;  
-            float a = 1.0f; 
+            int color = displayColors.getOrDefault(wp, wp.color);  
+            float r = ((color >> 16) & 0xFF) / 255.0f;  
+            float g = ((color >> 8) & 0xFF) / 255.0f;  
+            float b = (color & 0xFF) / 255.0f;  
+            float a = 1.0f;  
   
             poseStack.pushPose();  
             poseStack.translate((float)(wp.x - cam.x), (float)(wp.y - cam.y), (float)(wp.z - cam.z));  
@@ -75,6 +85,15 @@ public final class WaypointRenderer {
             poseStack.popPose();  
         }  
 
+    }
+
+    private static Integer orderOf(Waypoint wp) {  
+        if (wp.name == null) return null;  
+        try {  
+            return Integer.parseInt(wp.name.trim());  
+        } catch (NumberFormatException ignored) {  
+            return null;  
+        }  
     }
 
     private static void onCollectSubmits(LevelRenderContext context) {
@@ -129,15 +148,17 @@ public final class WaypointRenderer {
     
     private static void updateVisibleWaypoints(Minecraft client) {  
         visibleWaypoints.clear();  
+        displayColors.clear();  
         if (client.player == null) return;  
-        var player = client.player;
-
-        dev.shafthelper.config.ModConfig config = ShaftTracker.config();
+        var player = client.player;  
+    
+        dev.shafthelper.config.ModConfig config = ShaftTracker.config();  
         if (config == null || config.waypoints.isEmpty()) return;  
-  
+    
         Optional<AreaDetector.Area> currentArea = ShaftTracker.currentArea();  
         String currentIsland = AreaDetector.getDisplayName(currentArea.orElse(AreaDetector.Area.UNKNOWN));  
-
+    
+        List<Waypoint> candidates = new ArrayList<>();  
         for (Waypoint waypoint : config.waypoints) {  
             if (!waypoint.enabled) continue;  
             if (!waypoint.island.isEmpty()) {  
@@ -148,10 +169,68 @@ public final class WaypointRenderer {
                 player.getBlockY(),  
                 player.getBlockZ()  
             );  
-            if (distance > MAX_RENDER_DISTANCE) continue;  
-            visibleWaypoints.add(waypoint);  
+            if (distance > config.orderedChunks) continue;  
+            candidates.add(waypoint);  
         }  
-    } 
+    
+        if (!config.orderedWaypointsEnabled) {  
+            // Unchanged behavior: show all, use each waypoint's own color.  
+            visibleWaypoints.addAll(candidates);  
+            return;  
+        }  
+    
+        // --- Ordered mode ---  
+        // Keep only numerically-named waypoints, sorted ascending by their number.  
+        List<Waypoint> ordered = new ArrayList<>();  
+        for (Waypoint wp : candidates) {  
+            if (orderOf(wp) != null) {  
+                ordered.add(wp);  
+            } else {  
+                // Non-numeric waypoints are not part of the sequence,  
+                // but should still render with their own color.  
+                visibleWaypoints.add(wp);  
+            }  
+        }  
+        ordered.sort(Comparator.comparingInt(WaypointRenderer::orderOf));  
+    
+        if (ordered.isEmpty()) {  
+            activeOrderedIndex = 0;  
+            return;  
+        }  
+    
+        // Clamp the active index in case the list shrank (e.g. island change).  
+        if (activeOrderedIndex >= ordered.size()) activeOrderedIndex = ordered.size() - 1;  
+        if (activeOrderedIndex < 0) activeOrderedIndex = 0;  
+    
+        // Advance when within range of the current target and a next one exists.  
+        Waypoint current = ordered.get(activeOrderedIndex);  
+        double distToCurrent = current.distanceTo(  
+            player.getBlockX(),  
+            player.getBlockY(),  
+            player.getBlockZ()  
+        );  
+        if (distToCurrent <= config.orderedDistance && activeOrderedIndex < ordered.size() - 1) {  
+            activeOrderedIndex++;  
+        }  
+    
+        // Assign display colors: past = red, current = green, next = yellow.  
+        // Hide anything beyond "next".  
+        for (int i = 0; i < ordered.size(); i++) {  
+            Waypoint wp = ordered.get(i);  
+            int color;  
+            if (i < activeOrderedIndex) {  
+                color = COLOR_PAST;  
+            } else if (i == activeOrderedIndex) {  
+                color = COLOR_CURRENT;  
+            } else if (i == activeOrderedIndex + 1) {  
+                color = COLOR_NEXT;  
+            } else {  
+                continue; // future waypoints beyond "next" are not rendered  
+            }  
+            visibleWaypoints.add(wp);  
+            displayColors.put(wp, color);  
+        }  
+    }
 
     public static boolean groupMatchesShaft(String group, String shaftCode) {  
         // No group -> always show (island-only, backward compatible)  

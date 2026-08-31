@@ -198,9 +198,6 @@ public final class MiningCalculator implements HudElement {
                 currentBlock = blockPos;
                 startServerTick = player.tickCount;
                 ticksElapsed = 0;
-                
-                // Track expected blocks for efficiency
-                EfficiencyDisplay.onBlockExpected();
             }
             
             // Get mining speed from config
