@@ -39,6 +39,7 @@ public final class ModConfig {
     public String priceBasis = "flawless";
 
     public boolean goblinOmelette = true;
+    public boolean miningSpeedBoostEnabled = true;
     public boolean autoStats = true;
     public boolean trackerEnabled = true;
     public boolean logEnabled = true;

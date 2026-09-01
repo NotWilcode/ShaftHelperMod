@@ -85,6 +85,12 @@ public final class ShaftTracker {
     /** Chat listener hook: counts Hypixel's "PRISTINE!" proc messages for the profit tracker. */
     public static void onGameMessage(Component message) {
         String messageStr = message.getString();
+        String lower = messageStr.toLowerCase(Locale.ROOT);  
+        if (config.miningSpeedBoostEnabled  
+                && lower.contains("mining speed boost")  
+                && (lower.contains("used") || lower.contains("activated"))) {  
+            MiningCalculator.activateMiningSpeedBoost();  
+        }
         Map<String, Double> current = prices;
         if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {
             refreshHudLines();

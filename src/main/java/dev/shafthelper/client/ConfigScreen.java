@@ -265,7 +265,12 @@ public final class ConfigScreen extends Screen {
             config.pingSoundAlert, v -> config.pingSoundAlert = v)));  
         addLabel("Ping Sound Alert", y);  
         y += ROW_HEIGHT;  
-    
+
+        tabContent.add(addRenderableWidget(new StyledToggle(  
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
+            config.miningSpeedBoostEnabled, v -> config.miningSpeedBoostEnabled = v)));  
+        addLabel("Mining Speed Boost", y);  
+        y += ROW_HEIGHT;
         return y;  
     }
   
