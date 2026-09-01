@@ -22,14 +22,6 @@ import net.minecraft.world.phys.HitResult;
 public final class MiningCalculator implements HudElement {
 
     private static boolean initialized = false;
-
-    // Mining Speed Boost (HOTM ability): +300% for 20s, 70s cooldown  
-    private static final long BOOST_DURATION_MS  = 20_000L;  
-    private static final long BOOST_COOLDOWN_MS  = 70_000L; // measured from activation  
-    private static long boostActivatedAt = -BOOST_COOLDOWN_MS; // start ready
-
-    private static long mineStartWallMs = 0L;  
-    private static double estimatedTicksAtStart = 0.0;
     
     // Skyblock block hardness values (from PingOffsetMiner)
     private static final java.util.Map<String, Integer> BLOCK_HARDNESSES = new java.util.HashMap<>();
@@ -77,6 +69,8 @@ public final class MiningCalculator implements HudElement {
     private static boolean timeoutExceeded;
     private static int startServerTick;
     private static int ticksElapsed = 0;
+    private static long mineStartWallMs = 0L;  
+    private static double estimatedTicksAtStart = 0.0;
 
     public static void register() {
         if (!initialized) {
@@ -125,6 +119,7 @@ public final class MiningCalculator implements HudElement {
         if (config.goblinOmelette) professionalLevel += 1;  
         professionalLevel = Math.min(professionalLevel, 141);  
         double addedGemstoneSpeed = 50 + (professionalLevel * 5);  
+        estimatedTicksAtStart = ticksNeeded;
         double actualMiningSpeed = miningSpeed + addedGemstoneSpeed;  
         ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
     
@@ -139,9 +134,6 @@ public final class MiningCalculator implements HudElement {
         }  
         wasTimeoutExceeded = timeoutExceeded;  
     }
-
-    public static long getMineStartWallMs()   { return mineStartWallMs; }  
-    public static double getEstimatedTicks()   { return estimatedTicksAtStart; }
     
     // Public getters for TickDisplay
     public static int getTicksElapsed() {
@@ -163,30 +155,9 @@ public final class MiningCalculator implements HudElement {
         timeoutExceeded = false;
     }
 
-    public static BlockPos getCurrentBlock() {  
-        return currentBlock;  
-    }
-
-    public static void activateMiningSpeedBoost() {  
-        long now = System.currentTimeMillis();  
-        if (now - boostActivatedAt >= BOOST_COOLDOWN_MS) { // not on cooldown  
-            boostActivatedAt = now;  
-        }  
-    }  
-    
-    public static boolean isBoostActive() {  
-        return System.currentTimeMillis() - boostActivatedAt < BOOST_DURATION_MS;  
-    }  
-    
-    public static long boostCooldownRemainingMs() {  
-        long elapsed = System.currentTimeMillis() - boostActivatedAt;  
-        return Math.max(0, BOOST_COOLDOWN_MS - elapsed);  
-    }  
-    
-    /** 4x while active (base + 300%), else 1x. */  
-    public static double getBoostMultiplier() {  
-        return isBoostActive() ? 4.0 : 1.0;  
-    }
+    public static BlockPos getCurrentBlock()  { return currentBlock; }
+    public static long getMineStartWallMs()   { return mineStartWallMs; }  
+    public static double getEstimatedTicks()   { return estimatedTicksAtStart; }
 
     /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
     private static double computePingOffset(double ticksNeeded) {  
@@ -222,7 +193,7 @@ public final class MiningCalculator implements HudElement {
     private static final int BACKGROUND = 0xE00D1B2A;  
     private static final int BORDER     = 0xFF1B263B;  
     private static final int EDGE = 4;
-    private static final int BOX_HEIGHT = 95; // Increased to accommodate TPS display
+    private static final int BOX_HEIGHT = 85; // Increased to accommodate TPS display
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -283,22 +254,25 @@ public final class MiningCalculator implements HudElement {
             double pingOffset = computePingOffset(ticksNeeded);
             
             // Calculate width based on the text we'll display
-            String displayName = skyblockBlockName.replace("skyblock:", "").replace("_gemstone", "");
-            int width = Math.max(
-                font.width(Component.literal(displayName)),
-                Math.max(
-                    font.width(Component.literal(String.format("Ticks: %.0f", ticksNeeded))),
-                    Math.max(
-                        font.width(Component.literal(String.format("Offset: %.1f", pingOffset))),
-                        Math.max(
-                            font.width(Component.literal(String.format("Ping: %dms", ping))),
-                            Math.max(
-                                font.width(Component.literal(String.format("TPS: %.1f", tps))),
-                                font.width(Component.literal(String.format("Speed: %.1f", actualMiningSpeed)))
-                            )
-                        )
-                    )
-                )
+            String displayName = skyblockBlockName.replace("skyblock:", "").replace("_gemstone", "");  
+            int width = Math.max(  
+                font.width(Component.literal(displayName)),  
+                Math.max(  
+                    font.width(Component.literal(String.format("Ticks: %.0f", ticksNeeded))),  
+                    Math.max(  
+                        font.width(Component.literal(String.format("Offset: %.1f", pingOffset))),  
+                        Math.max(  
+                            font.width(Component.literal(String.format("Ping: %dms", ping))),  
+                            Math.max(  
+                                font.width(Component.literal(String.format("TPS: %.1f", tps))),  
+                                Math.max(  
+                                    font.width(Component.literal(String.format("Speed: %.1f", actualMiningSpeed))),  
+                                    font.width(Component.literal(String.format("Eff Ticks: %.1f", computeEffectiveTicks(ticksNeeded))))  
+                                )  
+                            )  
+                        )  
+                    )  
+                )  
             ) + 10; // Add padding
             
             int height = BOX_HEIGHT; // Use fixed height instead of dynamic calculation
@@ -335,15 +309,6 @@ public final class MiningCalculator implements HudElement {
             
             // Draw mining speed
             graphics.text(font, Component.literal(String.format("Speed: %.1f", actualMiningSpeed)), x + 5, y + 65, 0xFFE0E1DD, true);
-
-            // Draw effective ticks (ping-adjusted)  
-            graphics.text(font, Component.literal(String.format("Eff Ticks: %.1f", computeEffectiveTicks(ticksNeeded))), x + 5, y + 75, 0xFFE0E1DD, true);  
-            
-            // Draw boost status  
-            String boostText = isBoostActive()  
-                ? "Boost: ACTIVE"  
-                : (boostCooldownRemainingMs() == 0 ? "Boost: READY" : "Boost: " + (boostCooldownRemainingMs() / 1000) + "s");  
-            graphics.text(font, Component.literal(boostText), x + 5, y + 85, 0xFF90EE90, true);
         } catch (Exception e) {
             // Silently fail if there's any error
         }

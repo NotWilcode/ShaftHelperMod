@@ -85,11 +85,6 @@ public final class ShaftTracker {
     public static void onGameMessage(Component message) {
         String messageStr = message.getString();
         String lower = messageStr.toLowerCase(Locale.ROOT);  
-        if (config.miningSpeedBoostEnabled  
-                && lower.contains("mining speed boost")  
-                && (lower.contains("ability"))) {  
-            MiningCalculator.activateMiningSpeedBoost();  
-        }
         Map<String, Double> current = prices;
         if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {
             refreshHudLines();

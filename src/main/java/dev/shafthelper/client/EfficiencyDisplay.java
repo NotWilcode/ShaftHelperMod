@@ -82,7 +82,7 @@ public final class EfficiencyDisplay implements HudElement {
         
         // Position based on config
         int x = position(config.effX, graphics.guiWidth(), 150);
-        int y = position(config.effY, graphics.guiHeight(), 40);
+        int y = position(config.effY, graphics.guiHeight(), 50);
         
         float uptime = getUptime();
         int efficiency = getEfficiency();
