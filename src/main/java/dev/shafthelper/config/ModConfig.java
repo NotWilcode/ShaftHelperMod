@@ -38,7 +38,7 @@ public final class ModConfig {
     public String priceData = "average";
     public String priceBasis = "flawless";
 
-    public boolean goblinOmelette = true;
+    public boolean goblinOmelette = false;
     public boolean autoStats = true;
     public boolean trackerEnabled = true;
     public boolean logEnabled = true;
@@ -54,19 +54,19 @@ public final class ModConfig {
     
     /** HUD position as a percent of the screen: 0 = left/top edge, 100 = right/bottom edge. */
     public double trackerX = 0;  
-    public double trackerY = 0;  
-    public double netX = 100;  
-    public double netY = 5;  
-    public double logX = 0;  
-    public double logY = 30;  
-    public double profitX = 0;  
-    public double profitY = 50;  
-    public double calcX = 100;  
-    public double calcY = 30;  
-    public double tickX = 100;  
-    public double tickY = 30;  
-    public double effX = 100;  
-    public double effY = 30;
+    public double trackerY = 22.0;  
+    public double netX = 0;  
+    public double netY = 13.0;  
+    public double logX = 0.0;  
+    public double logY = 50.0;  
+    public double profitX = 0.0;  
+    public double profitY = 40.0;  
+    public double calcX = 53.0;  
+    public double calcY = 28.0;  
+    public double tickX = 53.0;  
+    public double tickY = 49.0;  
+    public double effX = 56.0;  
+    public double effY = 48.0;
 
     /** Sound settings */
     public boolean pingSoundAlert = true;

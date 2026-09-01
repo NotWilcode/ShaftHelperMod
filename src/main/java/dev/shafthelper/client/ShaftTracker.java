@@ -296,7 +296,7 @@ public final class ShaftTracker {
         } else if (current == null) {  
             tracker.add(header("Shaft Helper (fetching prices...)"));  
         } else {  
-            tracker.add(header("Shaft Helper (vs " + config.benchmark + ")"));  
+            tracker.add(header("Shaft Helper"));  
             if (currentShaft().isPresent() && currentShaftLapisCorpses() >= 0 && currentShaft().get().gem().isGemstone()) {  
                 ShaftDetector.Shaft shaft = currentShaft().get();  
                 int lapisCorpses = currentShaftLapisCorpses();  
@@ -340,38 +340,37 @@ public final class ShaftTracker {
         logLines = log;  
     }
 
-    /** What /shaft answers, one line per gemstone: mine it (and with how many lapis) or skip it. */
-    private static List<Component> overviewLines(Map<String, Double> current) {
-        List<Mining.Ranked> ranked = Mining.rankByProfit(
-            Mining.calculateBreakdown(config.miningSpeed, config.miningFortune, config.gemstoneFortune, config.gemstoneSpread), current, config.pristine);
-        
-        // Filter out non-gemstone shafts from the helper display
-        List<Mining.Ranked> gemstoneRanked = ranked.stream()
-            .filter(gem -> gem.gem().isGemstone())
-            .toList();
-        
-        Mining.Ranked reference = gemstoneRanked.stream()
-            .filter(gem -> gem.name().equalsIgnoreCase(config.benchmark))
-            .findFirst().orElse(gemstoneRanked.get(0));
-        return Pristine.corpseTable(gemstoneRanked, current, reference, config.pristine, Pristine.MAX_LAPIS_CORPSES)
-            .stream()
-            .sorted((a, b) -> Double.compare(b.coinsWithCorpses(), a.coinsWithCorpses()))
-            .map(row -> {
-                String status = switch (row.status()) {
-                    case REFERENCE -> "benchmark, " + Format.compact(row.coinsWithCorpses()) + "/hr";
-                    case AHEAD -> "mine, " + Format.compact(row.coinsWithCorpses()) + "/hr";
-                    case REACHABLE -> row.corpses() + " lapis, " + Format.compact(row.coinsWithCorpses()) + "/hr";
-                    case OUT_OF_REACH, IMPOSSIBLE -> Format.compact(row.coinsWithCorpses()) + "/hr";
-                };
-                ChatFormatting color = switch (row.status()) {
-                    case REFERENCE -> ChatFormatting.AQUA;
-                    case AHEAD, REACHABLE -> ChatFormatting.GREEN;
-                    case OUT_OF_REACH, IMPOSSIBLE -> ChatFormatting.RED;
-                };
-                return (Component) gemColored(row.ranked().gem(), row.name())
-                    .append(Component.literal(": " + status).withStyle(color));
-            })
-            .toList();
+    /** What /shaft answers: one line per gemstone type + lapis corpse count
+     * Shows everysingle gemstone with 0 to 4 lapis corpses, each with its own $/h. 
+     * Then sorts it from most to least profitable, so you can see what to aim for.
+     **/
+    private static List<Component> overviewLines(Map<String, Double> current) {  
+        List<Mining.Ranked> ranked = Mining.rankByProfit(  
+            Mining.calculateBreakdown(config.miningSpeed, config.miningFortune,  
+                config.gemstoneFortune, config.gemstoneSpread), current, config.pristine);  
+    
+        List<Mining.Ranked> gemstoneRanked = ranked.stream()  
+            .filter(gem -> gem.gem().isGemstone())  
+            .toList();  
+    
+        // One entry per gemstone per lapis-corpse count (0..MAX), each at its own coins/hr.  
+        record CorpseEntry(Mining.Ranked ranked, int corpses, double coins) {}  
+        List<CorpseEntry> entries = new ArrayList<>();  
+        for (Mining.Ranked gem : gemstoneRanked) {  
+            for (int c = 0; c <= Pristine.MAX_LAPIS_CORPSES; c++) {  
+                double coins = Mining.coinsPerHour(gem.breakdown(), current, config.pristine + c);  
+                entries.add(new CorpseEntry(gem, c, coins));  
+            }  
+        }  
+    
+        return entries.stream()  
+            .sorted((a, b) -> Double.compare(b.coins(), a.coins()))  
+            .limit(10)
+            .map(e -> (Component) gemColored(e.ranked().gem(), e.ranked().name())  
+                .append(Component.literal(  
+                    String.format(": %dl, %s/hr", e.corpses(), Format.compact(e.coins())))  
+                    .withStyle(ChatFormatting.GREEN)))  
+            .toList();  
     }
 
     /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */
