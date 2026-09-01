@@ -6,6 +6,8 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket;  
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -30,25 +32,33 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
     }
 
     @Inject(method = "channelRead0", at = @At("HEAD"))
-    private void shaftHelper$onReceive( ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci ) {
-        if (packet instanceof ClientboundBlockUpdatePacket update) {
+    private void shaftHelper$onReceive( ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci ) {  
+        if (packet instanceof ClientboundBlockChangedAckPacket ack) {  
+            trackAck(ack.sequence());          // ground-truth network RTT -> ServerStats.addPing  
+        }  
+  
+        if (packet instanceof ClientboundBlockUpdatePacket update) {  
             BlockPos tracked = dev.shafthelper.client.MiningCalculator.getCurrentBlock();  
-        
+  
             if (tracked != null  
                     && update.getPos().equals(tracked)  
                     && update.getBlockState().isAir()) {  
-        
+  
                 long start = dev.shafthelper.client.MiningCalculator.getMineStartWallMs();  
                 if (start > 0) {  
                     long elapsed = System.currentTimeMillis() - start;  
                     dev.shafthelper.client.ServerStats.calibrateFromBreak(  
                         dev.shafthelper.client.MiningCalculator.getEstimatedTicks(), elapsed);  
                 }  
-        
+  
                 dev.shafthelper.client.MiningCalculator.onBlockMined();  
                 dev.shafthelper.client.EfficiencyDisplay.onBlockMined();  
             }  
-        }
+        }  
+  
+        if (packet instanceof ClientboundSetTimePacket time) {  
+            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime());  
+        }  
     }
 
     @Override

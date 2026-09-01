@@ -99,6 +99,10 @@ public final class EfficiencyDisplay implements HudElement {
         int pingEff = MiningCalculator.getPingEfficiency();  
         String pingEffText = String.format("Ping Eff: %d%%", pingEff);  
         graphics.text(font, Component.literal(pingEffText), x, y + 20, 0xFF55FFFF, true);
+
+        double getMsPerTick = ServerStats.getMsPerTick();
+        String msPerTickText = String.format("ms/tick: %.1f", getMsPerTick);
+        graphics.text(font, Component.literal(msPerTickText), x, y + 30, 0xFF55FFFF, true);
     }
 
     static int position(double percent, int screen, int size) {

@@ -365,7 +365,7 @@ public final class ShaftTracker {
     
         return entries.stream()  
             .sorted((a, b) -> Double.compare(b.coins(), a.coins()))  
-            .limit(10)
+            .limit(12)
             .map(e -> (Component) gemColored(e.ranked().gem(), e.ranked().name())  
                 .append(Component.literal(  
                     String.format(": %dl, %s/hr", e.corpses(), Format.compact(e.coins())))  

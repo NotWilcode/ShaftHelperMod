@@ -114,14 +114,14 @@ public final class MiningCalculator implements HudElement {
         }  
     
         ModConfig config = ShaftTracker.config();  
-        double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;  
+        double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;    
         int professionalLevel = config.proffesionalLevel;  
-        if (config.goblinOmelette) professionalLevel += 1;  
-        professionalLevel = Math.min(professionalLevel, 141);  
-        double addedGemstoneSpeed = 50 + (professionalLevel * 5);  
-        estimatedTicksAtStart = ticksNeeded;
-        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed;  
+        professionalLevel = Math.min(professionalLevel, 141); 
+        if (config.goblinOmelette) professionalLevel += 1;   
+        double addedGemstoneSpeed = 50 + (professionalLevel * 5); 
+        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed; 
         ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
+            estimatedTicksAtStart = ticksNeeded; // store the fresh estimate for calibration
     
         ticksElapsed = player.tickCount - startServerTick;  
         double pingOffset = computePingOffset(ticksNeeded);  
@@ -161,23 +161,18 @@ public final class MiningCalculator implements HudElement {
 
     /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
     private static double computePingOffset(double ticksNeeded) {  
-        double pingSec = ServerStats.getPing() / 1000.0;  
-        double tps = ServerStats.getTps();  
-        double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;  
-        return pingSec > 0 && ticksNeeded > 0  
-                ? ticksNeeded - pingSec * 20.0 * tpsFactor  
-                : ticksNeeded;  
+        if (ticksNeeded <= 0) return ticksNeeded;  
+        double ping = ServerStats.getPing();  
+        if (ping <= 0) return ticksNeeded;  
+        double pingTicks = ping / 50.0; // 50 ms per client tick; network latency is TPS-independent  
+        return ticksNeeded - pingTicks;  
     }
 
     /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  
     public static double computeEffectiveTicks(double ticks) {  
-        double pingTicks = ServerStats.getPing() / 50.0; // 50 ms per tick  
+        double pingTicks = ServerStats.getPing() / ServerStats.getMsPerTick();  
         return ticks + pingTicks;  
-    }  
-    
-    public static double getEffectiveTicks() {  
-        return computeEffectiveTicks(ticksNeeded);  
-    }  
+    }
     
     /**  
      * Theoretical mining efficiency (%) as limited by ping:  

@@ -11,7 +11,17 @@ public class ServerStats {
     private static final int MAX_LATENCIES = 15;  
     private static final int DEFAULT_PING = 0;  
    
-    private static volatile long latestPing = DEFAULT_PING;  
+    private static volatile long latestPing = DEFAULT_PING; 
+
+    // Learned per-tick server compute time (t), the "50ms" that scales with TPS.  
+    private static final double DEFAULT_MS_PER_TICK = 50.0;  
+    private static final double MS_PER_TICK_ALPHA   = 0.2;   // EMA smoothing  
+    private static volatile double msPerTick = DEFAULT_MS_PER_TICK;  
+  
+    /** Learned per-tick server compute time in ms (converges toward the real value). */  
+    public static double getMsPerTick() {  
+        return msPerTick;  
+    }
   
     private static long lastServerGameTime = -1L;  
     private static long lastServerTimeWallClock = -1L;  
@@ -66,21 +76,36 @@ public class ServerStats {
     }  
 
     /**  
-     * Refines ping using the estimated vs. observed block-break time (image notes 2).  
-     * @param estimatedTicks the client-side estimated ticks-to-break (t)  
+     * Fine-tunes the per-tick server compute time (t) from a real block break.  
+     *  
+     * Model of the break round trip:  
+     *   observedElapsedMs = ackPing (c + s, network both ways) + t * ticks * tpsFactor  
+     * Solve for t:  
+     *   t = (observedElapsedMs - ackPing) / (ticks * tpsFactor)  
+     *  
+     * @param estimatedTicks    client-side estimated ticks-to-break  
      * @param observedElapsedMs wall-clock ms from mine-start to the block-update packet  
      */  
     public static void calibrateFromBreak(double estimatedTicks, long observedElapsedMs) {  
         if (estimatedTicks <= 0 || observedElapsedMs <= 0) return;  
+  
+        long ackPing = getPing();            // ground-truth network RTT (c + s) from action acks  
+        if (ackPing <= 0) return;            // no reliable network baseline yet  
+  
         double tps = getTps();  
         double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;  
-        // Expected server-side break duration in ms, adjusted for current TPS.  
-        double expectedBreakMs = estimatedTicks * 50.0 * tpsFactor;  
-        // Latency component observed on top of the actual break = round trip for the break event.  
-        long measuredRtt = observedElapsedMs - Math.round(expectedBreakMs);  
-        if (measuredRtt > 0 && measuredRtt < 2000) {  
-            addPing(measuredRtt); // feed the specific, break-derived RTT  
-        }  
+  
+        // Strip the network legs; what's left is the server-side compute for the break.  
+        double serverComputeMs = observedElapsedMs - ackPing;  
+        if (serverComputeMs <= 0) return;  
+  
+        double observedMsPerTick = serverComputeMs / (estimatedTicks * tpsFactor);  
+  
+        // Reject outliers (packet jitter, missed acks, world switches, etc.)  
+        if (observedMsPerTick < 20.0 || observedMsPerTick > 150.0) return;  
+  
+        // Exponential moving average toward the observed value.  
+        msPerTick += MS_PER_TICK_ALPHA * (observedMsPerTick - msPerTick);  
     }
   
     /** Current server TPS. Returns 20.0 during the warm-up window after a world switch. */  
