@@ -1,14 +1,14 @@
 package dev.shafthelper.client;  
   
-import java.util.List;
 import java.util.ArrayList;
-  
-import dev.shafthelper.config.ModConfig;  
-import net.minecraft.client.gui.Font;  
-import net.minecraft.client.gui.GuiGraphicsExtractor;  
-import net.minecraft.client.gui.screens.Screen;  
-import net.minecraft.network.chat.Component;
+import java.util.List;
+
+import dev.shafthelper.config.ModConfig;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 
 public class HUDEditorScreen extends Screen {  
@@ -142,6 +142,24 @@ public class HUDEditorScreen extends Screen {
             public double percentX() { return config.effX; }  public void percentX(double p) { config.effX = p; }  
             public double percentY() { return config.effY; }  public void percentY(double p) { config.effY = p; }  
         }); 
+
+        // --- Player Timers HUD ---
+        huds.add(new Hud() {
+            public int width() {
+                Font font = HUDEditorScreen.this.font;
+                String[] labels = { "Cold Resistance: 1m 30s", "Fillet O' Fortune: 10m 0s", "Pristine Potato: 5m 0s", "Deployable: 5m 0s" };
+                int w = 0;
+                for (String text : labels) {
+                    w = Math.max(w, font.width(Component.literal(text)));
+                }
+                return w + 12;
+            }
+            public int height() { return 50; }
+            public double percentX() { return config.playerTimersX; }
+            public void percentX(double p) { config.playerTimersX = p; }
+            public double percentY() { return config.playerTimersY; }
+            public void percentY(double p) { config.playerTimersY = p; }
+        });
     }   
   
     @Override  

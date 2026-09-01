@@ -32,6 +32,8 @@ public final class WaypointRenderer {
     private static final int COLOR_CURRENT = 0xFF778DA9; // green  
     private static final int COLOR_NEXT    = 0xE00D1B2A; // yellow  
     private static final int COLOR_PAST    = 0x90202020; // red  
+    private static final float NAME_TAG_BASE_SCALE = 1.0f;
+    private static final float NAME_TAG_DISTANCE_THRESHOLD = 12.0f;
     
     private static int activeOrderedIndex = 0;  
     private static final Map<Waypoint, Integer> displayColors = new HashMap<>();
@@ -261,11 +263,17 @@ public final class WaypointRenderer {
     private static void drawLabel(PoseStack poseStack, SubmitNodeCollector submitter, CameraRenderState cameraState, Vec3 playerPosition, Vec3 cam, Waypoint wp) {
         poseStack.pushPose();  
         poseStack.translate((float)(wp.x - cam.x), (float)(wp.y - cam.y), (float)(wp.z - cam.z));
+
+        double distanceToPlayer = playerPosition.distanceTo(new Vec3(wp.x, wp.y, wp.z));
+        float distanceScale = (float) Math.max(NAME_TAG_DISTANCE_THRESHOLD, distanceToPlayer) / NAME_TAG_DISTANCE_THRESHOLD;
+        float scale = NAME_TAG_BASE_SCALE * distanceScale;
+        poseStack.scale(scale, scale, scale);
+        poseStack.translate(0.5F / scale, 0.5F / scale, 0.5F / scale);
     
         String name = Objects.requireNonNull(wp.getDisplayName());  
         submitter.submitNameTag(
             poseStack,
-            new Vec3(0.5, 0.55, 0.5),
+            Vec3.ZERO,
             0xFFFFFFFF,
             Component.literal(name),
             true,

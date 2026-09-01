@@ -46,6 +46,8 @@ public final class ModConfig {
     public boolean enableDustParticles = true;
     public boolean enableDebugOverlay = false;
     public boolean enableNetwork = true;
+    public boolean miningBuffTimerEnabled = true;
+    public boolean miningDeployableTimerEnabled = true;
     public boolean presetsAutoImported = false;
     public boolean orderedWaypointsEnabled = true;
 
@@ -67,6 +69,8 @@ public final class ModConfig {
     public double tickY = 49.0;  
     public double effX = 56.0;  
     public double effY = 48.0;
+    public double playerTimersX = 4.0;
+    public double playerTimersY = 72.0;
 
     /** Sound settings */
     public boolean pingSoundAlert = true;

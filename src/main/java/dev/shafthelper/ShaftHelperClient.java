@@ -8,6 +8,7 @@ import dev.shafthelper.client.ShaftHud;
 import dev.shafthelper.client.ShaftTracker;
 import dev.shafthelper.client.WaypointRenderer;
 import dev.shafthelper.client.TickDisplay;
+import dev.shafthelper.client.PlayerTimers;
 import dev.shafthelper.client.ShaftTracker;
 import dev.shafthelper.core.AreaDetector;
 import dev.shafthelper.core.Waypoint;
@@ -51,10 +52,12 @@ public class ShaftHelperClient implements ClientModInitializer {
         MiningCalculator.register();
         TickDisplay.register();
         EfficiencyDisplay.register();
+        PlayerTimers.register();
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "network_tracker"), new NetworkTracker());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "mining_calculator"), new MiningCalculator());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "tick_display"), new TickDisplay());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "efficiency_display"), new EfficiencyDisplay());
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "player_timers"), new PlayerTimers());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_profit_hud"), new ShaftProfitHud());  
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_log_hud"), new ShaftLogHud());
     }

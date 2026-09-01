@@ -235,6 +235,18 @@ public final class ConfigScreen extends Screen {
             config.enableNetwork, v -> config.enableNetwork = v)));  
         addLabel("Network overlay", y);  
         y += ROW_HEIGHT;  
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.miningBuffTimerEnabled, v -> config.miningBuffTimerEnabled = v)));
+        addLabel("Mining Buff timer", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.miningDeployableTimerEnabled, v -> config.miningDeployableTimerEnabled = v)));
+        addLabel("Mining Deployable timer", y);
+        y += ROW_HEIGHT;
     
         return y;  
     }  
