@@ -33,23 +33,24 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
 
     @Inject(method = "channelRead0", at = @At("HEAD"))
     private void shaftHelper$onReceive( ChannelHandlerContext ctx, Packet<?> packet, CallbackInfo ci ) {
-        if (packet instanceof ClientboundBlockChangedAckPacket ack) {
-            trackAck(ack.sequence());
-        }
-
         if (packet instanceof ClientboundBlockUpdatePacket update) {
-            BlockPos tracked = dev.shafthelper.client.MiningCalculator.getCurrentBlock();
-
-            if (tracked != null
-                    && update.getPos().equals(tracked)
-                    && update.getBlockState().isAir()) {
-                dev.shafthelper.client.MiningCalculator.onBlockMined();
-                dev.shafthelper.client.EfficiencyDisplay.onBlockMined();
-            }
+            BlockPos tracked = dev.shafthelper.client.MiningCalculator.getCurrentBlock();  
+        
+            if (tracked != null  
+                    && update.getPos().equals(tracked)  
+                    && update.getBlockState().isAir()) {  
+        
+                long start = dev.shafthelper.client.MiningCalculator.getMineStartWallMs();  
+                if (start > 0) {  
+                    long elapsed = System.currentTimeMillis() - start;  
+                    dev.shafthelper.client.ServerStats.calibrateFromBreak(  
+                        dev.shafthelper.client.MiningCalculator.getEstimatedTicks(), elapsed);  
+                }  
+        
+                dev.shafthelper.client.MiningCalculator.onBlockMined();  
+                dev.shafthelper.client.EfficiencyDisplay.onBlockMined();  
+            }  
         }
-        if (packet instanceof ClientboundSetTimePacket time) {  
-            dev.shafthelper.client.ServerStats.onServerTimeUpdate(time.gameTime());  
-        }  
     }
 
     @Override

@@ -94,6 +94,11 @@ public final class EfficiencyDisplay implements HudElement {
         // Draw efficiency
         String effText = String.format("Efficiency: %d%%", efficiency);
         graphics.text(font, Component.literal(effText), x, y + 10, 0xFF55FFFF, true);
+
+        // Draw ping-limited efficiency (theoretical cap from latency)  
+        int pingEff = MiningCalculator.getPingEfficiency();  
+        String pingEffText = String.format("Ping Eff: %d%%", pingEff);  
+        graphics.text(font, Component.literal(pingEffText), x, y + 20, 0xFF55FFFF, true);
     }
 
     static int position(double percent, int screen, int size) {

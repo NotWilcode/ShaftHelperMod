@@ -64,6 +64,24 @@ public class ServerStats {
         lastServerGameTime = gameTime;  
         lastServerTimeWallClock = now;  
     }  
+
+    /**  
+     * Refines ping using the estimated vs. observed block-break time (image notes 2).  
+     * @param estimatedTicks the client-side estimated ticks-to-break (t)  
+     * @param observedElapsedMs wall-clock ms from mine-start to the block-update packet  
+     */  
+    public static void calibrateFromBreak(double estimatedTicks, long observedElapsedMs) {  
+        if (estimatedTicks <= 0 || observedElapsedMs <= 0) return;  
+        double tps = getTps();  
+        double tpsFactor = tps > 0 ? 20.0 / tps : 1.0;  
+        // Expected server-side break duration in ms, adjusted for current TPS.  
+        double expectedBreakMs = estimatedTicks * 50.0 * tpsFactor;  
+        // Latency component observed on top of the actual break = round trip for the break event.  
+        long measuredRtt = observedElapsedMs - Math.round(expectedBreakMs);  
+        if (measuredRtt > 0 && measuredRtt < 2000) {  
+            addPing(measuredRtt); // feed the specific, break-derived RTT  
+        }  
+    }
   
     /** Current server TPS. Returns 20.0 during the warm-up window after a world switch. */  
     public static double getTps() {  

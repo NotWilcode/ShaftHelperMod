@@ -27,6 +27,9 @@ public final class MiningCalculator implements HudElement {
     private static final long BOOST_DURATION_MS  = 20_000L;  
     private static final long BOOST_COOLDOWN_MS  = 70_000L; // measured from activation  
     private static long boostActivatedAt = -BOOST_COOLDOWN_MS; // start ready
+
+    private static long mineStartWallMs = 0L;  
+    private static double estimatedTicksAtStart = 0.0;
     
     // Skyblock block hardness values (from PingOffsetMiner)
     private static final java.util.Map<String, Integer> BLOCK_HARDNESSES = new java.util.HashMap<>();
@@ -109,19 +112,21 @@ public final class MiningCalculator implements HudElement {
         if (blockPos != null && !blockPos.equals(currentBlock)) {  
             currentBlock = blockPos;  
             startServerTick = player.tickCount;  
+            mineStartWallMs = System.currentTimeMillis();  
+            estimatedTicksAtStart = ticksNeeded; // may be 0 on first tick; refresh below
             ticksElapsed = 0;  
             timeoutExceeded = false;  
             EfficiencyDisplay.onBlockExpected();  
         }  
     
-    ModConfig config = ShaftTracker.config();  
-    double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;  
-    int professionalLevel = config.proffesionalLevel;  
-    if (config.goblinOmelette) professionalLevel += 1;  
-    professionalLevel = Math.min(professionalLevel, 141);  
-    double addedGemstoneSpeed = 50 + (professionalLevel * 5);  
-    double actualMiningSpeed = miningSpeed + addedGemstoneSpeed;  
-    ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
+        ModConfig config = ShaftTracker.config();  
+        double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;  
+        int professionalLevel = config.proffesionalLevel;  
+        if (config.goblinOmelette) professionalLevel += 1;  
+        professionalLevel = Math.min(professionalLevel, 141);  
+        double addedGemstoneSpeed = 50 + (professionalLevel * 5);  
+        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed;  
+        ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
     
         ticksElapsed = player.tickCount - startServerTick;  
         double pingOffset = computePingOffset(ticksNeeded);  
@@ -134,6 +139,9 @@ public final class MiningCalculator implements HudElement {
         }  
         wasTimeoutExceeded = timeoutExceeded;  
     }
+
+    public static long getMineStartWallMs()   { return mineStartWallMs; }  
+    public static double getEstimatedTicks()   { return estimatedTicksAtStart; }
     
     // Public getters for TickDisplay
     public static int getTicksElapsed() {
@@ -188,6 +196,27 @@ public final class MiningCalculator implements HudElement {
         return pingSec > 0 && ticksNeeded > 0  
                 ? ticksNeeded - pingSec * 20.0 * tpsFactor  
                 : ticksNeeded;  
+    }
+
+    /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  
+    public static double computeEffectiveTicks(double ticks) {  
+        double pingTicks = ServerStats.getPing() / 50.0; // 50 ms per tick  
+        return ticks + pingTicks;  
+    }  
+    
+    public static double getEffectiveTicks() {  
+        return computeEffectiveTicks(ticksNeeded);  
+    }  
+    
+    /**  
+     * Theoretical mining efficiency (%) as limited by ping:  
+     * pure break time / (break time + ping). Lower ticksNeeded -> ping hurts more,  
+     * matching the notes' "lower ticksToBreak means higher effect of ping on profit".  
+     */  
+    public static int getPingEfficiency() {  
+        double eff = computeEffectiveTicks(ticksNeeded);  
+        if (eff <= 0 || ticksNeeded <= 0) return 100;  
+        return (int) Math.round(ticksNeeded / eff * 100.0);  
     }
 
     private static final int BACKGROUND = 0xE00D1B2A;  
@@ -318,16 +347,6 @@ public final class MiningCalculator implements HudElement {
         } catch (Exception e) {
             // Silently fail if there's any error
         }
-    }
-
-    private static double computeEffectiveTicks(double ticksNeeded) {  
-        double msPerTick = 1000.0 / 20.0; // 50.0 ms per tick  
-        double pingTicks = ServerStats.getPing() / msPerTick;  
-        return ticksNeeded + pingTicks;  
-    }
-
-    public static double getEffectiveTicks() {  
-        return computeEffectiveTicks(ticksNeeded);  
     }
 
     private static int position(double percent, int screen, int size) {  
