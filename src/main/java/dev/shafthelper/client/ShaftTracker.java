@@ -1,5 +1,12 @@
 package dev.shafthelper.client;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
 import dev.shafthelper.config.ModConfig;
 import dev.shafthelper.core.AreaDetector;
 import dev.shafthelper.core.Format;
@@ -12,28 +19,20 @@ import dev.shafthelper.core.ProcTracker;
 import dev.shafthelper.core.ShaftDetector;
 import dev.shafthelper.core.ShaftLog;
 import dev.shafthelper.core.StatsParser;
-
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerScoreEntry;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.DisplaySlot;  
-import net.minecraft.world.scores.Objective;  
-import net.minecraft.world.scores.PlayerScoreEntry;
 
 /**
  * Scans the tab list and scoreboard every couple of seconds: reads mining stats from Hypixel's
@@ -88,7 +87,7 @@ public final class ShaftTracker {
         String lower = messageStr.toLowerCase(Locale.ROOT);  
         if (config.miningSpeedBoostEnabled  
                 && lower.contains("mining speed boost")  
-                && (lower.contains("used") || lower.contains("activated"))) {  
+                && (lower.contains("ability"))) {  
             MiningCalculator.activateMiningSpeedBoost();  
         }
         Map<String, Double> current = prices;

@@ -121,7 +121,6 @@ public final class MiningCalculator implements HudElement {
     professionalLevel = Math.min(professionalLevel, 141);  
     double addedGemstoneSpeed = 50 + (professionalLevel * 5);  
     double actualMiningSpeed = miningSpeed + addedGemstoneSpeed;  
-    if (config.miningSpeedBoostEnabled) actualMiningSpeed *= getBoostMultiplier();  
     ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
     
         ticksElapsed = player.tickCount - startServerTick;  
@@ -242,7 +241,6 @@ public final class MiningCalculator implements HudElement {
             professionalLevel = Math.min(professionalLevel, 141);
             double addedGemstoneSpeed = 50 + (professionalLevel * 5);
             double actualMiningSpeed = MiningSpeed + addedGemstoneSpeed;
-            if (config.miningSpeedBoostEnabled) actualMiningSpeed *= getBoostMultiplier();
             
             // Calculate ticks needed using PingOffsetMiner formula
             ticksNeeded = Math.round(blockHardness * 30 / (actualMiningSpeed));
