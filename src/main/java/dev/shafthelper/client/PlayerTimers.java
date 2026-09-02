@@ -109,16 +109,14 @@ public final class PlayerTimers implements HudElement {
         return isDeployableItem(handName);
     }
 
-    private static boolean isDeployableItem(String itemName) {
-        return switch (itemName) {
-            case "dwarven lantern", "mithril lantern", "titanium lantern", "glacite lantern", "will-o'-wisp" -> true;
-            default -> false;
-        };
+    private static boolean isDeployableItem(String itemName) {  
+        if (itemName == null || itemName.isEmpty()) return false;  
+        return itemName.contains("lantern") || itemName.contains("will-o'-wisp");  
     }
 
     private static String normalizeItemName(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "";
-        return normalizeItemName(stack.getDisplayName().getString());
+        return normalizeItemName(stack.getHoverName().getString());
     }
 
     private static String normalizeItemName(String raw) {
@@ -152,7 +150,6 @@ public final class PlayerTimers implements HudElement {
             String lower = line.toLowerCase(Locale.ROOT);
             if (lower.contains("cold resistance")
                 || lower.contains("filet o' fortune")
-                || lower.contains("fillet o' fortune")
                 || lower.contains("pristine potato")) {
                 result.add(line);
             }
