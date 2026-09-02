@@ -1,37 +1,39 @@
 package dev.shafthelper;
 
-import dev.shafthelper.client.MiningCalculator;
-import dev.shafthelper.client.NetworkTracker;
-import dev.shafthelper.client.ShaftProfitHud;
-import dev.shafthelper.client.ShaftLogHud;
-import dev.shafthelper.client.ShaftHud;
-import dev.shafthelper.client.ShaftTracker;
-import dev.shafthelper.client.WaypointRenderer;
-import dev.shafthelper.client.TickDisplay;
-import dev.shafthelper.client.PlayerTimers;
-import dev.shafthelper.client.ShaftTracker;
-import dev.shafthelper.core.AreaDetector;
-import dev.shafthelper.core.Waypoint;
-import dev.shafthelper.client.EfficiencyDisplay;
-import dev.shafthelper.command.ShaftCommand;
-
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import com.google.gson.Gson;
-import com.google.gson.*;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
-import net.fabricmc.loader.api.FabricLoader;
 
+import dev.shafthelper.client.EfficiencyDisplay;
+import dev.shafthelper.client.MiningCalculator;
+import dev.shafthelper.client.NetworkTracker;
+import dev.shafthelper.client.PickaxeAbilityAlert;
+import dev.shafthelper.client.PlayerTimers;
+import dev.shafthelper.client.ShaftHud;
+import dev.shafthelper.client.ShaftLogHud;
+import dev.shafthelper.client.ShaftProfitHud;
+import dev.shafthelper.client.ShaftTracker;
+import dev.shafthelper.client.TickDisplay;
+import dev.shafthelper.client.WaypointRenderer;
+import dev.shafthelper.command.ShaftCommand;
+import dev.shafthelper.core.AreaDetector;
+import dev.shafthelper.core.Waypoint;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.resources.Identifier;
 
 public class ShaftHelperClient implements ClientModInitializer {
@@ -53,11 +55,13 @@ public class ShaftHelperClient implements ClientModInitializer {
         TickDisplay.register();
         EfficiencyDisplay.register();
         PlayerTimers.register();
+        PickaxeAbilityAlert.register();
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "network_tracker"), new NetworkTracker());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "mining_calculator"), new MiningCalculator());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "tick_display"), new TickDisplay());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "efficiency_display"), new EfficiencyDisplay());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "player_timers"), new PlayerTimers());
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "pickaxe_ability_alert"), new PickaxeAbilityAlert());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_profit_hud"), new ShaftProfitHud());  
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_log_hud"), new ShaftLogHud());
     }

@@ -79,30 +79,34 @@ public final class EfficiencyDisplay implements HudElement {
         Font font = client.font;
         
         ModConfig config = ShaftTracker.config();
+        int boxW = Math.max(1, (int) Math.round(150 * config.effScale));
+        int boxH = Math.max(1, (int) Math.round(50 * config.effScale));
         
         // Position based on config
-        int x = position(config.effX, graphics.guiWidth(), 150);
-        int y = position(config.effY, graphics.guiHeight(), 50);
+        int x = position(config.effX, graphics.guiWidth(), boxW);
+        int y = position(config.effY, graphics.guiHeight(), boxH);
+        int inset = Math.max(1, (int) Math.round(2 * config.effScale));
+        int lineStep = Math.max(1, (int) Math.round(10 * config.effScale));
         
         float uptime = getUptime();
         int efficiency = getEfficiency();
         
         // Draw uptime
         String uptimeText = String.format("Uptime: %.1fs", uptime);
-        graphics.text(font, Component.literal(uptimeText), x, y, 0xFF55FFFF, true);
+        graphics.text(font, Component.literal(uptimeText), x + inset, y + inset, 0xFF55FFFF, true);
         
         // Draw efficiency
         String effText = String.format("Efficiency: %d%%", efficiency);
-        graphics.text(font, Component.literal(effText), x, y + 10, 0xFF55FFFF, true);
+        graphics.text(font, Component.literal(effText), x + inset, y + lineStep, 0xFF55FFFF, true);
 
         // Draw ping-limited efficiency (theoretical cap from latency)  
         int pingEff = MiningCalculator.getPingEfficiency();  
         String pingEffText = String.format("Ping Eff: %d%%", pingEff);  
-        graphics.text(font, Component.literal(pingEffText), x, y + 20, 0xFF55FFFF, true);
+        graphics.text(font, Component.literal(pingEffText), x + inset, y + lineStep * 2, 0xFF55FFFF, true);
 
         double getMsPerTick = ServerStats.getMsPerTick();
         String msPerTickText = String.format("ms/tick: %.1f", getMsPerTick);
-        graphics.text(font, Component.literal(msPerTickText), x, y + 30, 0xFF55FFFF, true);
+        graphics.text(font, Component.literal(msPerTickText), x + inset, y + lineStep * 3, 0xFF55FFFF, true);
     }
 
     static int position(double percent, int screen, int size) {

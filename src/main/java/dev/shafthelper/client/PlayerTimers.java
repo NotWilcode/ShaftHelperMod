@@ -21,9 +21,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScoreEntry;
@@ -91,38 +93,33 @@ public final class PlayerTimers implements HudElement {
             return;
         }
 
-        boolean rightClickHeld = client.options != null && client.options.keyUse.isDown();
-        if (rightClickHeld && !lastRightClickHeld && holdingDeployable(client.player)) {
-            deployableUntil = now + DEPLOYABLE_DURATION_MS;
-        }
-        lastRightClickHeld = rightClickHeld;
-
         updateBuffTimers(client);
     }
 
-    private static boolean holdingDeployable(Player player) {
-        if (player == null) return false;
-        String handName = normalizeItemName(player.getMainHandItem());
-        if (handName.isEmpty()) {
-            handName = normalizeItemName(player.getOffhandItem());
-        }
-        return isDeployableItem(handName);
+    private static boolean holdingDeployable(Player player) {  
+        if (player == null) return false;  
+        return isDeployable(player.getMainHandItem()) || isDeployable(player.getOffhandItem());  
+    }  
+    
+    private static boolean isDeployable(ItemStack stack) {  
+        if (stack == null || stack.isEmpty()) return false;  
+        ItemLore lore = stack.get(DataComponents.LORE);  
+        if (lore == null) return false;  
+        for (Component line : lore.lines()) {  
+            String clean = stripFormatting(line.getString())  
+                .replace("’", "'")  
+                .toLowerCase(Locale.ROOT)  
+                .trim();  
+            if (clean.contains("mining deployable")) return true;  
+        }  
+        return false;  
     }
 
-    private static boolean isDeployableItem(String itemName) {  
-        if (itemName == null || itemName.isEmpty()) return false;  
-        return itemName.contains("lantern") || itemName.contains("will-o'-wisp");  
-    }
-
-    private static String normalizeItemName(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return "";
-        return normalizeItemName(stack.getHoverName().getString());
-    }
-
-    private static String normalizeItemName(String raw) {
-        if (raw == null) return "";
-        String cleaned = raw.replace("’", "'").replace("\u00a7", "").trim();
-        return cleaned.toLowerCase(Locale.ROOT);
+    public static void onDeployableUse(net.minecraft.world.item.ItemStack stack) {  
+        if (stack == null || stack.isEmpty()) return;  
+        if (isDeployable(stack)) {   // your lore-based check that "eventually returns true"  
+            deployableUntil = System.currentTimeMillis() + DEPLOYABLE_DURATION_MS;  
+        }  
     }
 
     private static String stripFormatting(String raw) {
@@ -308,19 +305,27 @@ public final class PlayerTimers implements HudElement {
         int paddedWidth = width + 12;
         int lineHeight = 10;
         int height = lines.size() * lineHeight + 12;
-        int x = position(config.playerTimersX, graphics.guiWidth(), paddedWidth);
-        int y = position(config.playerTimersY, graphics.guiHeight(), height);
+        int scaledWidth = Math.max(1, (int) Math.round(paddedWidth * config.playerTimersScale));
+        int scaledHeight = Math.max(1, (int) Math.round(height * config.playerTimersScale));
+        int x = position(config.playerTimersX, graphics.guiWidth(), scaledWidth);
+        int y = position(config.playerTimersY, graphics.guiHeight(), scaledHeight);
 
-        graphics.fill(x, y, x + paddedWidth, y + height, 0xE00D1B2A);
-        graphics.fill(x, y, x + paddedWidth, y + 1, 0xFF1B263B);
-        graphics.fill(x, y + height - 1, x + paddedWidth, y + height, 0xFF1B263B);
-        graphics.fill(x, y, x + 1, y + height, 0xFF1B263B);
-        graphics.fill(x + paddedWidth - 1, y, x + paddedWidth, y + height, 0xFF1B263B);
+        int bg = config.themeBg;
+        int border = config.themeBorder;
+        int text = config.themeText;
 
-        int drawY = y + 5;
+        graphics.fill(x, y, x + scaledWidth, y + scaledHeight, bg);
+        graphics.fill(x, y, x + scaledWidth, y + 1, border);
+        graphics.fill(x, y + scaledHeight - 1, x + scaledWidth, y + scaledHeight, border);
+        graphics.fill(x, y, x + 1, y + scaledHeight, border);
+        graphics.fill(x + scaledWidth - 1, y, x + scaledWidth, y + scaledHeight, border);
+
+        int drawY = y + Math.max(1, (int) Math.round(5 * config.playerTimersScale));
+        int textX = x + Math.max(1, (int) Math.round(6 * config.playerTimersScale));
+        int stepY = Math.max(1, (int) Math.round(lineHeight * config.playerTimersScale));
         for (String line : lines) {
-            graphics.text(font, Component.literal(line), x + 6, drawY, 0xFFE0E1DD, true);
-            drawY += lineHeight;
+            graphics.text(font, Component.literal(line), textX, drawY, text, true);
+            drawY += stepY;
         }
     }
 

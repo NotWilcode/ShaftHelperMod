@@ -4,6 +4,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+
+import dev.shafthelper.config.ModConfig;
 import org.junit.jupiter.api.Test;
 
 class PlayerTimersTest {
@@ -27,5 +29,27 @@ class PlayerTimersTest {
         assertEquals(3_600_000L, PlayerTimers.parseDuration("1h"));
         assertEquals(1_500_000L, PlayerTimers.parseDuration("25m 0s"));
         assertNull(PlayerTimers.parseDuration("N/A"));
+    }
+
+    @Test
+    void matchesPickaxeAbilityReadyMessages() {
+        assertEquals(true, PickaxeAbilityAlert.matchesReadyText("Drill is now available!"));
+        assertEquals(true, PickaxeAbilityAlert.matchesReadyText("Meteorite drill is now available!"));
+        assertEquals(false, PickaxeAbilityAlert.matchesReadyText("Pickaxe is still cooling down"));
+    }
+
+    @Test
+    void cyclesThemeAndPersistsPalette() {
+        ModConfig config = new ModConfig();
+        assertEquals("midnight", config.guiTheme);
+        config.cycleTheme();
+        assertEquals("sunset", config.guiTheme);
+        assertEquals(0xE04A1F2A, config.themeBg);
+        config.cycleTheme();
+        assertEquals("forest", config.guiTheme);
+        config.cycleTheme();
+        assertEquals("aurora", config.guiTheme);
+        assertEquals(0xE0122338, config.themeBg);
+        assertEquals("midnight", config.nextThemeId());
     }
 }

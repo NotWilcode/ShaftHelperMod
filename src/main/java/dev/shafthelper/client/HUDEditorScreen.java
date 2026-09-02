@@ -17,19 +17,22 @@ public class HUDEditorScreen extends Screen {
     private static final int LINE_HEIGHT = 10;  
     private static final int EDGE = 4;  
     private static final int DIM_BG = 0x90202020; // transparent grey "edit mode" tint  
-    private static final int GHOST_BG = 0xE00D1B2A;  
-    private static final int GHOST_BORDER = 0xFF778DA9; // accent so it reads as "grabbable"  
   
     private final Screen parent;  
 
     private interface Hud {
         int width();
         int height();
+        double scale();
+        void scale(double s);
         double percentX(); 
         void percentX(double p);
         double percentY(); 
         void percentY(double p);
     }
+
+    private static final double MIN_SCALE = 0.5;
+    private static final double MAX_SCALE = 2.5;
 
     private final List<Hud> huds = new ArrayList<>();
  
@@ -56,6 +59,7 @@ public class HUDEditorScreen extends Screen {
                 return w;  
             }  
             public int height() { return ShaftTracker.trackerLines().size() * LINE_HEIGHT; }  
+            public double scale() { return config.trackerScale; }  public void scale(double s) { config.trackerScale = s; }
             public double percentX() { return config.trackerX; }  public void percentX(double p) { config.trackerX = p; }  
             public double percentY() { return config.trackerY; }  public void percentY(double p) { config.trackerY = p; }  
         });  
@@ -63,6 +67,7 @@ public class HUDEditorScreen extends Screen {
         huds.add(new Hud() {  
             public int width() { return 110; }  
             public int height() { return 30; }  
+            public double scale() { return config.netScale; }  public void scale(double s) { config.netScale = s; }
             public double percentX() { return config.netX; }  public void percentX(double p) { config.netX = p; }  
             public double percentY() { return config.netY; }  public void percentY(double p) { config.netY = p; }  
         });  
@@ -75,6 +80,7 @@ public class HUDEditorScreen extends Screen {
                 return w;  
             }  
             public int height() { return ShaftTracker.logLines().size() * LINE_HEIGHT; }  
+            public double scale() { return config.logScale; }  public void scale(double s) { config.logScale = s; }
             public double percentX() { return config.logX; }  public void percentX(double p) { config.logX = p; }  
             public double percentY() { return config.logY; }  public void percentY(double p) { config.logY = p; }  
         }); 
@@ -87,6 +93,7 @@ public class HUDEditorScreen extends Screen {
                 return w;  
             }   
             public int height() { return ShaftTracker.profitLines().size() * LINE_HEIGHT; } 
+            public double scale() { return config.profitScale; }  public void scale(double s) { config.profitScale = s; }
             public double percentX() { return config.profitX; }  public void percentX(double p) { config.profitX = p; }  
             public double percentY() { return config.profitY; }  public void percentY(double p) { config.profitY = p; }  
         }); 
@@ -114,6 +121,7 @@ public class HUDEditorScreen extends Screen {
                 return w;  
             }   
             public int height() { return 75; } // Fixed height to match MiningCalculator.BOX_HEIGHT
+            public double scale() { return config.calcScale; } public void scale(double s) { config.calcScale = s; }
             public double percentX() { return config.calcX; }  public void percentX(double p) { config.calcX = p; }  
             public double percentY() { return config.calcY; }  public void percentY(double p) { config.calcY = p; }  
         });
@@ -125,6 +133,7 @@ public class HUDEditorScreen extends Screen {
                 return font.width(Component.literal("50/50")) + 10;  
             }   
             public int height() { return 15; } 
+            public double scale() { return config.tickScale; } public void scale(double s) { config.tickScale = s; }
             public double percentX() { return config.tickX; }  public void percentX(double p) { config.tickX = p; }  
             public double percentY() { return config.tickY; }  public void percentY(double p) { config.tickY = p; }  
         });
@@ -139,6 +148,7 @@ public class HUDEditorScreen extends Screen {
                 ) + 10;  
             }   
             public int height() { return 25; } 
+            public double scale() { return config.effScale; } public void scale(double s) { config.effScale = s; }
             public double percentX() { return config.effX; }  public void percentX(double p) { config.effX = p; }  
             public double percentY() { return config.effY; }  public void percentY(double p) { config.effY = p; }  
         }); 
@@ -155,6 +165,7 @@ public class HUDEditorScreen extends Screen {
                 return w + 12;
             }
             public int height() { return 50; }
+            public double scale() { return config.playerTimersScale; } public void scale(double s) { config.playerTimersScale = s; }
             public double percentX() { return config.playerTimersX; }
             public void percentX(double p) { config.playerTimersX = p; }
             public double percentY() { return config.playerTimersY; }
@@ -170,22 +181,28 @@ public class HUDEditorScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, DIM_BG);  
   
         for (Hud hud : huds) {
-            int w = hud.width(), h = hud.height();
+            int w = scaledWidth(hud), h = scaledHeight(hud);
             if (w == 0 || h == 0) continue;  // skip empty HUDs
             int x = percentToPixel(hud.percentX(), this.width, w);
             int y = percentToPixel(hud.percentY(), this.height, h);
 
+            int bg = ShaftTracker.config().themeBg;
+            int border = ShaftTracker.config().themeAccent;
+            int text = ShaftTracker.config().themeText;
             int l = x - 2, t = y - 2, r = x + w + 2, b = y + h + 2;  
-            graphics.fill(l, t, r, b, GHOST_BG);  
-            graphics.fill(l, t, r, t + 1, GHOST_BORDER);  
-            graphics.fill(l, b - 1, r, b, GHOST_BORDER);  
-            graphics.fill(l, t, l + 1, b, GHOST_BORDER);  
-            graphics.fill(r - 1, t, r, b, GHOST_BORDER);  
+            graphics.fill(l, t, r, b, bg);  
+            graphics.fill(l, t, r, t + 1, border);  
+            graphics.fill(l, b - 1, r, b, border);  
+            graphics.fill(l, t, l + 1, b, border);  
+            graphics.fill(r - 1, t, r, b, border);  
+
+            String scaleText = String.format("Scale: %.2fx", hud.scale());
+            graphics.text(this.font, scaleText, x + 4, y + 4, text, true);
         }
 
-        String hint = "Drag the box, then Esc to save";  
+        String hint = "Drag to move, wheel to resize, then Esc to save";  
         graphics.text(this.font, hint,  
-            this.width / 2 - this.font.width(hint) / 2, 6, 0xFFE0E1DD, true);  
+            this.width / 2 - this.font.width(hint) / 2, 6, ShaftTracker.config().themeText, true);  
     }  
   
     @Override  
@@ -194,7 +211,7 @@ public class HUDEditorScreen extends Screen {
         // Iterate topmost-first so overlapping boxes grab the last-drawn one.  
             for (int i = huds.size() - 1; i >= 0; i--) {  
                 Hud hud = huds.get(i);  
-                int w = hud.width(), h = hud.height();  
+                int w = scaledWidth(hud), h = scaledHeight(hud);  
                 if (w == 0 || h == 0) continue;  
                 int x = percentToPixel(hud.percentX(), this.width, w);  
                 int y = percentToPixel(hud.percentY(), this.height, h);  
@@ -210,10 +227,33 @@ public class HUDEditorScreen extends Screen {
         return super.mouseClicked(event, doubleClick); 
     }  
   
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        Hud target = null;
+        for (int i = huds.size() - 1; i >= 0; i--) {
+            Hud hud = huds.get(i);
+            int w = scaledWidth(hud), h = scaledHeight(hud);
+            if (w == 0 || h == 0) continue;
+            int x = percentToPixel(hud.percentX(), this.width, w);
+            int y = percentToPixel(hud.percentY(), this.height, h);
+            if (mouseX >= x - 2 && mouseX <= x + w + 2 && mouseY >= y - 2 && mouseY <= y + h + 2) {
+                target = hud;
+                break;
+            }
+        }
+        if (target == null && dragging != null) target = dragging;
+        if (target != null && scrollY != 0.0) {
+            double next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, target.scale() + (scrollY > 0 ? -0.1 : 0.1)));
+            target.scale(next);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+  
     @Override  
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {  
         if (dragging != null && event.button() == 0) {  
-            int w = dragging.width(), h = dragging.height();  
+            int w = scaledWidth(dragging), h = scaledHeight(dragging);  
             int newX = (int) event.x() - grabOffX;  
             int newY = (int) event.y() - grabOffY;  
             dragging.percentX(pixelToPercent(newX, this.width, w));  
@@ -229,6 +269,14 @@ public class HUDEditorScreen extends Screen {
         return super.mouseReleased(event);  
     }  
   
+    private static int scaledWidth(Hud hud) {
+        return Math.max(1, (int) Math.round(hud.width() * hud.scale()));
+    }
+
+    private static int scaledHeight(Hud hud) {
+        return Math.max(1, (int) Math.round(hud.height() * hud.scale()));
+    }
+
     private static int percentToPixel(double percent, int screen, int size) {  
         int available = Math.max(0, screen - size - 2 * EDGE);  
         return EDGE + (int) Math.round(available * Math.clamp(percent, 0.0, 100.0) / 100.0);  

@@ -39,13 +39,13 @@ public final class StyledSlider extends AbstractSliderButton {
     @Override  
     public void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float pt) {  
         int x = getX(), y = getY(), x2 = x + getWidth(), y2 = y + getHeight();  
-        StyledTheme.box(g, x, y, x2, y2, StyledTheme.BG, StyledTheme.BORDER);  
+        StyledTheme.box(g, x, y, x2, y2, StyledTheme.bg(), StyledTheme.border());  
         int hx = x + (int) (value * (getWidth() - 8));  
-        g.fill(hx, y, hx + 8, y2, StyledTheme.ACCENT);  
+        g.fill(hx, y, hx + 8, y2, StyledTheme.accent());  
     
         var font = Minecraft.getInstance().font;  
         String label = getMessage().getString();  
         g.text(font, label, x + (getWidth() - font.width(label)) / 2, y + (getHeight() - 8) / 2,  
-            StyledTheme.TEXT, true);  
+            StyledTheme.text(), true);  
     } 
 }

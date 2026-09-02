@@ -40,12 +40,12 @@ public final class ConfigScreen extends Screen {
     private static final int SECTION_GAP = 10;  
     private static final int PANEL_PAD = 12;  
   
-    private static final int LABEL_COLOR = 0xffe0e1dd;  
-    private static final int HEADER_COLOR = 0xff778da9;  
-    private static final int PANEL_BG = 0xe00d1b2a;  
-    private static final int PANEL_BORDER = 0xff1b263b;  
-  
-    private final ModConfig config = ShaftTracker.config();  
+private final ModConfig config = ShaftTracker.config();
+
+    private int labelColor() { return config.themeText; }
+    private int headerColor() { return config.themeAccent; }
+    private int panelBg() { return config.themeBg; }
+    private int panelBorder() { return config.themeBorder; }
 
     private final List<String> presetFiles = new ArrayList<>();  
     private int selectedPreset = 0;
@@ -247,8 +247,24 @@ public final class ConfigScreen extends Screen {
             config.miningDeployableTimerEnabled, v -> config.miningDeployableTimerEnabled = v)));
         addLabel("Mining Deployable timer", y);
         y += ROW_HEIGHT;
+
+        StyledButton themeButton = new StyledButton(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            Component.literal(capitalize(config.guiTheme)), b -> {
+                config.cycleTheme();
+                rebuildWidgets();
+            });
+        tabContent.add(addRenderableWidget(themeButton));
+        addLabel("Theme", y);
+        y += ROW_HEIGHT;
     
         return y;  
+    }
+
+    private static String capitalize(String value) {
+        if (value == null || value.isBlank()) return "Midnight";
+        String normalized = value.trim();
+        return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
     }  
   
     private int buildOptions(int y) {  
@@ -330,13 +346,13 @@ public final class ConfigScreen extends Screen {
         if (!headers.isEmpty()) {  
             dividers.add(y - SECTION_GAP / 2);  
         }  
-        headers.add(new Text(name, panelLeft + PANEL_PAD, y, HEADER_COLOR));  
+        headers.add(new Text(name, panelLeft + PANEL_PAD, y, headerColor()));
         return y + HEADER_HEIGHT;  
     }  
   
     private void addLabel(String text, int y) {  
         labels.add(new Text(text, labelRight - this.font.width(text),  
-            y + (FIELD_HEIGHT - 8) / 2, LABEL_COLOR));  
+            y + (FIELD_HEIGHT - 8) / 2, labelColor()));  
     }  
   
     private int labeledInt(String label, int y, int initial, IntConsumer setter) {  
@@ -396,11 +412,11 @@ public final class ConfigScreen extends Screen {
         int xOff = (int) Math.round((1f - eased) * 24); // slide in from +24px  
     
         // Panel background + border (static)  
-        graphics.fill(bgLeft, bgTop, bgRight, bgBottom, PANEL_BG);  
-        graphics.fill(bgLeft, bgTop, bgRight, bgTop + 1, PANEL_BORDER);  
-        graphics.fill(bgLeft, bgBottom - 1, bgRight, bgBottom, PANEL_BORDER);  
-        graphics.fill(bgLeft, bgTop, bgLeft + 1, bgBottom, PANEL_BORDER);  
-        graphics.fill(bgRight - 1, bgTop, bgRight, bgBottom, PANEL_BORDER); 
+        graphics.fill(bgLeft, bgTop, bgRight, bgBottom, panelBg());  
+        graphics.fill(bgLeft, bgTop, bgRight, bgTop + 1, panelBorder());  
+        graphics.fill(bgLeft, bgBottom - 1, bgRight, bgBottom, panelBorder());  
+        graphics.fill(bgLeft, bgTop, bgLeft + 1, bgBottom, panelBorder());  
+        graphics.fill(bgRight - 1, bgTop, bgRight, bgBottom, panelBorder()); 
     
         // Slide content widgets before they're drawn by super  
         for (var w : tabContent) w.setX(fieldX + xOff);  
@@ -408,7 +424,7 @@ public final class ConfigScreen extends Screen {
         for (EditBox f : numberFields) {  
             int l = f.getX() - 1, t = f.getY() - 1;  
             int r = f.getX() + f.getWidth() + 1, b = f.getY() + f.getHeight() + 1;  
-            int col = f.isFocused() ? HEADER_COLOR : PANEL_BORDER;  // accent when focused  
+            int col = f.isFocused() ? headerColor() : panelBorder();  // accent when focused  
             graphics.fill(l, t, r, t + 1, col);   // top  
             graphics.fill(l, b - 1, r, b, col);   // bottom  
             graphics.fill(l, t, l + 1, b, col);   // left  
@@ -419,12 +435,12 @@ public final class ConfigScreen extends Screen {
     
         // Title stays with center of Gui bg  
         String title = this.title.getString();  
-        graphics.text(this.font, title, (bgLeft + bgRight) / 2 - this.font.width(title) / 2, titleY, LABEL_COLOR, true);  
+        graphics.text(this.font, title, (bgLeft + bgRight) / 2 - this.font.width(title) / 2, titleY, labelColor(), true);  
     
         // Dividers, headers, labels: slide + fade together with widgets  
         for (int dy : dividers) {  
             graphics.fill(panelLeft + PANEL_PAD + xOff, dy, panelRight - PANEL_PAD + xOff, dy + 1,  
-                withAlpha(PANEL_BORDER, eased));  
+                withAlpha(panelBorder(), eased));  
         }  
         for (Text h : headers) {  
             graphics.text(this.font, h.value(), h.x() + xOff, h.y(), withAlpha(h.color(), eased), true);  

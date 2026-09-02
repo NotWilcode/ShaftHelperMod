@@ -41,10 +41,6 @@ public final class WaypointsScreen extends Screen {
     private static final int ROW_HEIGHT = 22;  
     private static final int ROW_GAP = 2;  
   
-    private static final int LABEL_COLOR = 0xFFE0E1DD;  
-    private static final int HEADER_COLOR = 0xFF9DB4D0;  
-    private static final int PANEL_BG = 0xE00D1B2A;  
-    private static final int PANEL_BORDER = 0xFF1B263B;  
     private static final int LIST_BG = 0xD0152535;  
     private static final int LIST_BORDER = 0xFF2A3B55;  
     private static final int GROUP_BG = 0xFF1B2C42;  
@@ -277,7 +273,7 @@ public final class WaypointsScreen extends Screen {
   
     private int addCoordField(int x, int rowY, int boxY, String label,  
                               IntGetter getter, IntSetter setter) {  
-        texts.add(new Text(label, x, boxY + 5, LABEL_COLOR));  
+        texts.add(new Text(label, x, boxY + 5, config.themeText));  
         int labelW = this.font.width(label) + 4;  
         int boxX = x + labelW;  
         int boxW = 46;  
@@ -418,12 +414,14 @@ public final class WaypointsScreen extends Screen {
   
     @Override  
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {  
+        int bg = config.themeBg;
+        int border = config.themeBorder;
         // Panel background + border  
-        graphics.fill(panelLeft, panelTop, panelRight, panelBottom, PANEL_BG);  
-        graphics.fill(panelLeft, panelTop, panelRight, panelTop + 1, PANEL_BORDER);  
-        graphics.fill(panelLeft, panelBottom - 1, panelRight, panelBottom, PANEL_BORDER);  
-        graphics.fill(panelLeft, panelTop, panelLeft + 1, panelBottom, PANEL_BORDER);  
-        graphics.fill(panelRight - 1, panelTop, panelRight, panelBottom, PANEL_BORDER);  
+        graphics.fill(panelLeft, panelTop, panelRight, panelBottom, bg);  
+        graphics.fill(panelLeft, panelTop, panelRight, panelTop + 1, border);  
+        graphics.fill(panelLeft, panelBottom - 1, panelRight, panelBottom, border);  
+        graphics.fill(panelLeft, panelTop, panelLeft + 1, panelBottom, border);  
+        graphics.fill(panelRight - 1, panelTop, panelRight, panelBottom, border);  
   
         // List viewport background  
         graphics.fill(listX, viewportTop, listX + listWidth, viewportBottom, LIST_BG);  
@@ -435,9 +433,10 @@ public final class WaypointsScreen extends Screen {
   
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);  
   
+        int labelColor = config.themeText;
         // Title  
         String title = this.title.getString();  
-        graphics.text(this.font, title, this.width / 2 - this.font.width(title) / 2, titleY, LABEL_COLOR, true);  
+        graphics.text(this.font, title, this.width / 2 - this.font.width(title) / 2, titleY, labelColor, true);  
   
         // Deferred field labels (X:/Y:/Z:)  
         for (Text t : texts) {  

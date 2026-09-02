@@ -13,14 +13,14 @@ public final class StyledButton extends Button {
     @Override  
     protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float pt) {  
         boolean hover = isHovered();  
-        int bg     = !active ? StyledTheme.BG : (hover ? StyledTheme.BG_HOVER : StyledTheme.BG);  
-        int border = (hover && active) ? StyledTheme.ACCENT : StyledTheme.BORDER;  
+        int bg     = !active ? StyledTheme.bg() : (hover ? StyledTheme.bgHover() : StyledTheme.bg());  
+        int border = (hover && active) ? StyledTheme.accent() : StyledTheme.border();  
         StyledTheme.box(g, getX(), getY(), getX() + getWidth(), getY() + getHeight(), bg, border);  
   
         var font = Minecraft.getInstance().font;  
         String label = getMessage().getString();  
         int tx = getX() + (getWidth() - font.width(label)) / 2;  
         int ty = getY() + (getHeight() - 8) / 2;  
-        g.text(font, label, tx, ty, active ? StyledTheme.TEXT : StyledTheme.TEXT_OFF, true);  
+        g.text(font, label, tx, ty, active ? StyledTheme.text() : StyledTheme.textOff(), true);  
     }  
 }

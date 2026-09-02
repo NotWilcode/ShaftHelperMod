@@ -42,17 +42,20 @@ public final class TickDisplay implements HudElement {
         Font font = client.font;
         
         ModConfig config = ShaftTracker.config();
+        int boxW = Math.max(1, (int) Math.round(100 * config.tickScale));
+        int boxH = Math.max(1, (int) Math.round(20 * config.tickScale));
         
         // Position based on config
-        int x = position(config.tickX, graphics.guiWidth(), 100);
-        int y = position(config.tickY, graphics.guiHeight(), 20);
+        int x = position(config.tickX, graphics.guiWidth(), boxW);
+        int y = position(config.tickY, graphics.guiHeight(), boxH);
         
         // Format tick string
         String tickString = String.format("%d/%.0f", ticksElapsed, ticksNeeded);
         int color = timeoutExceeded ? POST_MINED_COLOR : PRE_MINED_COLOR;
+        int inset = Math.max(1, (int) Math.round(2 * config.tickScale));
         
         // Draw tick display with shadow
-        graphics.text(font, Component.literal(tickString), x, y, color, true);
+        graphics.text(font, Component.literal(tickString), x + inset, y + inset, color, true);
     }
 
     static int position(double percent, int screen, int size) {

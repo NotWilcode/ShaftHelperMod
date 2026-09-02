@@ -49,21 +49,30 @@ public final class NetworkTracker implements HudElement {
         Font font = client.font;
 
         // Ensure you match the exact instance accessor pattern your project config uses
-        int x = position(config.netX, graphics.guiWidth(), BOX_W);
-        int y = position(config.netY, graphics.guiHeight(), BOX_H);
+        int boxW = Math.max(1, (int) Math.round(BOX_W * config.netScale));
+        int boxH = Math.max(1, (int) Math.round(BOX_H * config.netScale));
+        int x = position(config.netX, graphics.guiWidth(), boxW);
+        int y = position(config.netY, graphics.guiHeight(), boxH);
         
+        int bg = config.themeBg;
+        int border = config.themeBorder;
+        int text = config.themeText;
+        int accent = config.themeAccent;
+        int inset = Math.max(1, (int) Math.round(5 * config.netScale));
+        int secondLineY = y + Math.max(1, (int) Math.round(15 * config.netScale));
+
         // Draw background
-        graphics.fill(x, y, x + BOX_W, y + BOX_H, 0xE00D1B2A);
-        graphics.fill(x, y, x + BOX_W, y + 1, 0xFF1B263B);
-        graphics.fill(x, y + BOX_H - 1, x + BOX_W, y + BOX_H, 0xFF1B263B);
-        graphics.fill(x, y, x + 1, y + BOX_H, 0xFF1B263B);
-        graphics.fill(x + BOX_W - 1, y, x + BOX_W, y + BOX_H, 0xFF1B263B);
+        graphics.fill(x, y, x + boxW, y + boxH, bg);
+        graphics.fill(x, y, x + boxW, y + 1, border);
+        graphics.fill(x, y + boxH - 1, x + boxW, y + boxH, border);
+        graphics.fill(x, y, x + 1, y + boxH, border);
+        graphics.fill(x + boxW - 1, y, x + boxW, y + boxH, border);
         
         // Draw TPS
         float currentTPS = getCurrentTPS();
         String tpsText = String.format("TPS: %.1f", currentTPS);
-        int tpsColor = currentTPS >= 18.0f ? 0xFF90EE90 : (currentTPS >= 15.0f ? 0xFFFFFF00 : 0xFFFF6347);
-        graphics.text(font, Component.literal(tpsText), x + 5, y + 5, tpsColor, true);
+        int tpsColor = currentTPS >= 18.0f ? accent : (currentTPS >= 15.0f ? 0xFFFFFF00 : 0xFFFF6347);
+        graphics.text(font, Component.literal(tpsText), x + inset, y + inset, tpsColor, true);
         
         // Draw Ping
         int currentPing = getCurrentPing();
@@ -76,7 +85,7 @@ public final class NetworkTracker implements HudElement {
             pingText = String.format("Ping: %dms", currentPing);
             pingColor = currentPing <= 100 ? 0xFF90EE90 : (currentPing <= 200 ? 0xFFFFFF00 : 0xFFFF6347);
         }
-        graphics.text(font, Component.literal(pingText), x + 5, y + 15, pingColor, true);
+        graphics.text(font, Component.literal(pingText), x + inset, secondLineY, pingColor, true);
     }
 
     static int position(double percent, int screen, int size) {

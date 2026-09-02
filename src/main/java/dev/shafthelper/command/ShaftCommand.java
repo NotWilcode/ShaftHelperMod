@@ -35,25 +35,31 @@ public final class ShaftCommand {
 
     private static final HttpFetcher FETCHER = HttpFetcher.real();
 
-    public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(
-            ClientCommands.literal("shaft")
-                .executes(context -> run(context.getSource(), ""))
-                .then(ClientCommands.literal("config")
-                    .executes(context -> openConfig(context.getSource())))
-                .then(ClientCommands.literal("waypoints")
-                    .executes(context -> openWaypoints(context.getSource())))
-                .then(ClientCommands.literal("ping")
-                    .then(ClientCommands.argument("ms", IntegerArgumentType.integer(0))
-                        .executes(context -> setPing(context.getSource(), IntegerArgumentType.getInteger(context, "ms")))))
-                .then(ClientCommands.literal("miningspeed")
-                    .then(ClientCommands.argument("speed", IntegerArgumentType.integer(1))
-                        .executes(context -> setMiningSpeed(context.getSource(), IntegerArgumentType.getInteger(context, "speed")))))
-                .then(ClientCommands.argument("options", StringArgumentType.greedyString())
-                    .suggests(ShaftCommand::suggestOptions)
-                    .executes(context -> run(context.getSource(),
-                        StringArgumentType.getString(context, "options"))))
-        );
+    public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {  
+        dispatcher.register(  
+            ClientCommands.literal("shaft")  
+                .executes(context -> openMenu(context.getSource()))   // was run(source, "")  
+                .then(ClientCommands.literal("config")  
+                    .executes(context -> openConfig(context.getSource())))  
+                .then(ClientCommands.literal("waypoints")  
+                    .executes(context -> openWaypoints(context.getSource())))  
+                .then(ClientCommands.literal("ping")  
+                    .then(ClientCommands.argument("ms", IntegerArgumentType.integer(0))  
+                        .executes(context -> setPing(context.getSource(), IntegerArgumentType.getInteger(context, "ms")))))  
+                .then(ClientCommands.literal("miningspeed")  
+                    .then(ClientCommands.argument("speed", IntegerArgumentType.integer(1))  
+                        .executes(context -> setMiningSpeed(context.getSource(), IntegerArgumentType.getInteger(context, "speed")))))  
+                .then(ClientCommands.argument("options", StringArgumentType.greedyString())  
+                    .suggests(ShaftCommand::suggestOptions)  
+                    .executes(context -> run(context.getSource(),  
+                        StringArgumentType.getString(context, "options"))))  
+        );  
+    }  
+    
+    private static int openMenu(FabricClientCommandSource source) {  
+        // Queued so it opens after the chat screen closes itself at the end of the command.  
+        source.getClient().schedule(() -> source.getClient().setScreen(new dev.shafthelper.client.ShaftMenuScreen()));  
+        return 1;  
     }
 
     private static CompletableFuture<Suggestions> suggestOptions(
@@ -64,6 +70,14 @@ public final class ShaftCommand {
             offset.suggest(suggestion);
         }
         return offset.buildFuture();
+    }
+
+    private static int openGuide(FabricClientCommandSource source, int page) {  
+        // Queued so it opens after the chat screen closes itself at the end of the command.  
+        final int p = page;  
+        source.getClient().schedule(() ->  
+            source.getClient().setScreen(new dev.shafthelper.client.ShaftGuideScreen(p)));  
+        return 1;  
     }
 
     private static int openConfig(FabricClientCommandSource source) {
@@ -107,7 +121,7 @@ public final class ShaftCommand {
         applyConfigDefaults(options);
 
         if (options.help != null || options.miningSpeed == null) {
-            send(source, GuideText.page(options.help == null ? 1 : options.help));
+            openGuide(source, options.help == null ? 1 : options.help);  
             return 1;
         }
 

@@ -18,9 +18,6 @@ import net.minecraft.network.chat.Component;
 public final class ShaftHud implements HudElement {
 
     private static final int LINE_HEIGHT = 10;
-    private static final int LINE_COLOR = 0xFFE0E1DD;  // was 0xFFFFFFFF  
-    private static final int BACKGROUND = 0xE00D1B2A;  // was 0x90000000  
-    private static final int BORDER     = 0xFF1B263B;  // new, matches PANEL_BORDER
     private static final int EDGE = 4;
 
     @Override
@@ -37,22 +34,28 @@ public final class ShaftHud implements HudElement {
         for (Component line : lines) {
             width = Math.max(width, font.width(line));
         }
+        int scaledWidth = Math.max(1, (int) Math.round(width * config.trackerScale));
+        int scaledHeight = Math.max(1, (int) Math.round(lines.size() * LINE_HEIGHT * config.trackerScale));
         //Background box
-        int height = lines.size() * LINE_HEIGHT;
-        int x = position(config.trackerX, graphics.guiWidth(), width);
-        int top = position(config.trackerY, graphics.guiHeight(), height);
+        int x = position(config.trackerX, graphics.guiWidth(), scaledWidth);
+        int top = position(config.trackerY, graphics.guiHeight(), scaledHeight);
 
-        int l = x - 2, t = top - 2, r = x + width + 2, b = top + height + 2;  
-        graphics.fill(l, t, r, b, BACKGROUND);  // background
-        graphics.fill(l, t, r, t + 1, BORDER);  // top edge
-        graphics.fill(l, b - 1, r, b, BORDER);  // bottom edge
-        graphics.fill(l, t, l + 1, b, BORDER);  // left edge
-        graphics.fill(r - 1, t, r, b, BORDER);  // right edge
+        int bg = config.themeBg;
+        int border = config.themeBorder;
+        int text = config.themeText;
+        int l = x - 2, t = top - 2, r = x + scaledWidth + 2, b = top + scaledHeight + 2;  
+        graphics.fill(l, t, r, b, bg);  // background
+        graphics.fill(l, t, r, t + 1, border);  // top edge
+        graphics.fill(l, b - 1, r, b, border);  // bottom edge
+        graphics.fill(l, t, l + 1, b, border);  // left edge
+        graphics.fill(r - 1, t, r, b, border);  // right edge
 
+        int lineStep = Math.max(1, (int) Math.round(LINE_HEIGHT * config.trackerScale));
+        int textX = x;
         int y = top;
         for (Component line : lines) {
-            graphics.text(font, line, x, y, LINE_COLOR, true);
-            y += LINE_HEIGHT;
+            graphics.text(font, line, textX, y, text, true);
+            y += lineStep;
         }
     }
 

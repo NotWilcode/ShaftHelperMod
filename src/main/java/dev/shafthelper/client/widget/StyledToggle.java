@@ -26,12 +26,12 @@ public final class StyledToggle extends Button {
     protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float pt) {  
         int x = getX(), y = getY(), x2 = x + getWidth(), y2 = y + getHeight();  
         // track  
-        StyledTheme.box(g, x, y, x2, y2, StyledTheme.BG,  
-            value ? StyledTheme.ACCENT : StyledTheme.BORDER);  
+        StyledTheme.box(g, x, y, x2, y2, StyledTheme.bg(),  
+            value ? StyledTheme.accent() : StyledTheme.border());  
         // knob: right half when on, left half when off  
         int knobW = getWidth() / 2 - 2;  
         int knobX = value ? (x2 - knobW - 2) : (x + 2);  
         g.fill(knobX, y + 2, knobX + knobW, y2 - 2,  
-            value ? StyledTheme.ACCENT : StyledTheme.TEXT_OFF);  
+            value ? StyledTheme.accent() : StyledTheme.textOff());  
     }  
 }
