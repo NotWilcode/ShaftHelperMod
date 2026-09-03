@@ -21,6 +21,7 @@ public final class EfficiencyDisplay implements HudElement {
     private static int blocksMined = 0;
     private static int expectedBlocks = 0;
     private static long lastMineTime = 0;
+    private static double idealElapsedMs = 0;
     private static final int TIMEOUT_SECONDS = 30;
 
     public static void register() {
@@ -29,15 +30,19 @@ public final class EfficiencyDisplay implements HudElement {
         }
     }
     
-    public static void onBlockMined() {
-        long currentTime = System.currentTimeMillis();
-        if (!isMining()) {
-            timeStarted = currentTime;
-            blocksMined = 0;
-            expectedBlocks = 0;
-        }
-        lastMineTime = currentTime;
-        blocksMined++;
+    public static void onBlockMined() {  
+        long currentTime = System.currentTimeMillis();  
+        if (!isMining()) {  
+            timeStarted = currentTime;  
+            blocksMined = 0;  
+            expectedBlocks = 0;  
+            idealElapsedMs = 0;  
+        }  
+        lastMineTime = currentTime;  
+        blocksMined++;  
+        // Ideal time this block should have taken (ticks * ms-per-tick), incl. ping.  
+        double effTicks = MiningCalculator.computeEffectiveTicks(MiningCalculator.getEstimatedTicks());  
+        idealElapsedMs += effTicks * ServerStats.getMsPerTick();  
     }
     
     public static void onBlockExpected() {  
@@ -62,10 +67,10 @@ public final class EfficiencyDisplay implements HudElement {
         return difference / 1000f;
     }
     
-    private static int getEfficiency() {
-        if (expectedBlocks == 0) return 100;
-        float eff = (float) blocksMined / expectedBlocks;
-        return Math.clamp(Math.round(eff * 100f), 0, 100);
+    private static int getEfficiency() {  
+        if (blocksMined == 0) return 100;  
+        double actualMs = Math.max(System.currentTimeMillis() - timeStarted, 1);  
+        return Math.clamp((int) Math.round(idealElapsedMs / actualMs * 100.0), 0, 100);  
     }
 
     @Override

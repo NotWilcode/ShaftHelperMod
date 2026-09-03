@@ -162,10 +162,13 @@ public final class MiningCalculator implements HudElement {
     /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
     private static double computePingOffset(double ticksNeeded) {  
         if (ticksNeeded <= 0) return ticksNeeded;  
+        // Server-side break time scales with how long each tick actually takes.  
+        double tpsFactor = ServerStats.getMsPerTick() / 50.0;  
+        double effectiveTicks = ticksNeeded * tpsFactor;  
         double ping = ServerStats.getPing();  
-        if (ping <= 0) return ticksNeeded;  
-        double pingTicks = ping / 50.0; // 50 ms per client tick; network latency is TPS-independent  
-        return ticksNeeded - pingTicks;  
+        if (ping <= 0) return effectiveTicks;  
+        double pingTicks = ping / 50.0; // network latency is TPS-independent (client ticks)  
+        return effectiveTicks - pingTicks;  
     }
 
     /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  

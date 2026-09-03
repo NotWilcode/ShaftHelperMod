@@ -109,14 +109,11 @@ public final class ShaftTracker {
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
             PROCS.resetAll();
-            LOG.clear();
             currentLapisCorpses = -1;
             currentUmberCorpses = -1;
             currentTungstenCorpses = -1;
             detectedShaft = Optional.empty();
             missingShaftScans = 0;
-            logLines = List.of();
-            trackerLines = List.of();
             return;
         }
 

@@ -1,27 +1,26 @@
 package dev.shafthelper.client;  
   
-import java.util.ArrayList;  
-import java.util.HashSet;  
-import java.util.List;  
-import java.util.Locale;  
-import java.util.Set;  
-  
-import org.slf4j.Logger;  
-import org.slf4j.LoggerFactory;  
-  
-import net.minecraft.nbt.CompoundTag;  
-  
-import dev.shafthelper.ShaftHelperClient;  
-import dev.shafthelper.core.AreaDetector;  
-import dev.shafthelper.core.Waypoint;  
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;  
-import net.minecraft.client.Minecraft;  
-import net.minecraft.core.component.DataComponents;  
-import net.minecraft.world.entity.EquipmentSlot;  
-import net.minecraft.world.entity.decoration.ArmorStand;  
-import net.minecraft.world.item.ItemStack;  
-import net.minecraft.world.item.Items;  
-import net.minecraft.world.item.component.CustomData;  
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.shafthelper.ShaftHelperClient;
+import dev.shafthelper.core.AreaDetector;
+import dev.shafthelper.core.Waypoint;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.DyedItemColor;  
 import net.minecraft.world.phys.AABB;  
   
@@ -92,7 +91,12 @@ public final class CorpseFinder {
         if (!shaftCode.equals(currentShaftCode)) {  
             currentShaftCode = shaftCode;  
             clearedCandidates.clear();  
-            loggedPositions.clear();  
+            loggedPositions.clear(); 
+            int totalForShaft = 0;
+            for (Waypoint c : ShaftHelperClient.corpseWaypoints()) {  
+                if (WaypointRenderer.groupMatchesShaft(c.group, shaftCode)) totalForShaft++;  
+            }
+            allFound = totalForShaft > 0 && clearedCandidates.size() >= totalForShaft;
         }  
   
         // 1) Detect real corpse stands in range.  
@@ -151,10 +155,20 @@ public final class CorpseFinder {
             activeCandidate = null; // recomputed next tick from remaining candidates  
         }  
     }  
+
+    private static volatile boolean allFound = false;  
+    private static int foundCorpseCount = 0;  
+    
+    public static boolean allCorpsesFound() { return allFound; }  
+    public static boolean isCandidateCleared(int x, int y, int z) {  
+        return clearedCandidates.contains(key(x, y, z));  
+    }
   
     private static void reset() {  
         detected = List.of();  
         activeCandidate = null;  
+        allFound = false;
+        foundCorpseCount = 0;
     }  
   
     /** Maps a corpse helmet item to its corpse type, or null if not a corpse helmet. */  

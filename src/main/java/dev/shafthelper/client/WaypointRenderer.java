@@ -106,7 +106,7 @@ public final class WaypointRenderer {
             poseStack.popPose();  
         }  
 
-        // Fix 5: line from the player to the active (and next) waypoint.  
+        // Fix 5: line from the player's eyes to the active (and next) waypoint.  
         if (config != null && config.waypointLineEnabled && activeTarget != null) {  
             Vec3 from = Objects.requireNonNull(Minecraft.getInstance().player).position();  
             drawNavLine(poseStack, lineBuffer, cam, from, activeTarget, themedColor(config, 0));  
@@ -232,6 +232,7 @@ public final class WaypointRenderer {
             for (Waypoint waypoint : ShaftHelperClient.corpseWaypoints()) {  
                 if (!waypoint.island.isEmpty() && !waypoint.island.equalsIgnoreCase(currentIsland)) continue;  
                 if (!groupMatchesShaft(waypoint.group, shaftCode)) continue;  
+                if (CorpseFinder.isCandidateCleared(waypoint.x, waypoint.y, waypoint.z)) continue;  
                 if (waypoint.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ()) <= config.orderedChunks) {  
                     corpseWaypoints.add(waypoint);  
                  }  
@@ -304,10 +305,10 @@ public final class WaypointRenderer {
         // Advance when within range of the current target and a next one exists.  
         Waypoint current = ordered.get(activeIndex);  
         double distToCurrent = current.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ());  
-        if (distToCurrent <= config.orderedDistance && activeIndex < ordered.size() - 1) {  
-            activeIndex++;  
+        if (distToCurrent <= config.orderedDistance) {  
+            activeIndex = (activeIndex + 1) % ordered.size();  
             activeOrderedId = ordered.get(activeIndex).getId();  
-        }  
+        } 
   
         // Fix 3: only render the current + next. Passed waypoints are dropped entirely.  
         activeTarget = ordered.get(activeIndex);  
