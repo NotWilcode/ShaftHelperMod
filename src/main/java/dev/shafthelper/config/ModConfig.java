@@ -63,6 +63,7 @@ public final class ModConfig {
     public boolean presetsAutoImported = false;
     public boolean orderedWaypointsEnabled = true;
     public boolean corpseWaypointsEnabled = true;
+    public boolean corpseFinderEnabled = true;
 
     public double orderedDistance = 2.0;
     public double orderedChunks = 64;

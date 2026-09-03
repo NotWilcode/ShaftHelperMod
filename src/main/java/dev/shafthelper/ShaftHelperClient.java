@@ -26,6 +26,7 @@ import dev.shafthelper.client.ShaftProfitHud;
 import dev.shafthelper.client.ShaftTracker;
 import dev.shafthelper.client.TickDisplay;
 import dev.shafthelper.client.WaypointRenderer;
+import dev.shafthelper.client.CorpseFinder;
 import dev.shafthelper.command.ShaftCommand;
 import dev.shafthelper.core.AreaDetector;
 import dev.shafthelper.core.ShaftDetector;
@@ -56,6 +57,7 @@ public class ShaftHelperClient implements ClientModInitializer {
             (message, overlay) -> { if (!overlay) ShaftTracker.onGameMessage(message); });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_hud"), new ShaftHud());
         WaypointRenderer.register();
+        CorpseFinder.register();
         NetworkTracker.register();
         MiningCalculator.register();
         TickDisplay.register();

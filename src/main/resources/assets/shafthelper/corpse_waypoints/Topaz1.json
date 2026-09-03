@@ -35,5 +35,14 @@
       "island": "Mineshafts",
       "enabled": false,
       "color": 16711680
+    },
+        {
+      "name": "Corpse",
+      "x": -195,
+      "y": 22,
+      "z": -158,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
     }
 ]

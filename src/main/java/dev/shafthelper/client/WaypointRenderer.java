@@ -180,16 +180,22 @@ public final class WaypointRenderer {
             if (distance > config.orderedChunks) continue;  
             candidates.add(waypoint);  
         }  
-        List<Waypoint> corpseWaypoints = new ArrayList<>();
-        if (config.corpseWaypointsEnabled) {
-            String shaftCode = ShaftTracker.currentShaft().map(shaft -> shaft.code()).orElse("");
-            for (Waypoint waypoint : ShaftHelperClient.corpseWaypoints()) {
-                if (!waypoint.island.isEmpty() && !waypoint.island.equalsIgnoreCase(currentIsland)) continue;
-                if (!groupMatchesShaft(waypoint.group, shaftCode)) continue;
-                if (waypoint.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ()) <= config.orderedChunks) {
-                    corpseWaypoints.add(waypoint);
-                }
-            }
+        List<Waypoint> corpseWaypoints = new ArrayList<>();  
+        if (config.corpseWaypointsEnabled) {  
+            String shaftCode = ShaftTracker.currentShaft().map(shaft -> shaft.code()).orElse("");  
+            for (Waypoint waypoint : ShaftHelperClient.corpseWaypoints()) {  
+                if (!waypoint.island.isEmpty() && !waypoint.island.equalsIgnoreCase(currentIsland)) continue;  
+                if (!groupMatchesShaft(waypoint.group, shaftCode)) continue;  
+                if (waypoint.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ()) <= config.orderedChunks) {  
+                    corpseWaypoints.add(waypoint);  
+                 }  
+            }  
+        }  
+        // Live detected corpses (real armor stands sent by the server).  
+        for (Waypoint waypoint : CorpseFinder.detectedCorpses()) {  
+            if (waypoint.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ()) <= config.orderedChunks) {  
+                corpseWaypoints.add(waypoint);  
+            }  
         }
     
         if (!config.orderedWaypointsEnabled) {  
