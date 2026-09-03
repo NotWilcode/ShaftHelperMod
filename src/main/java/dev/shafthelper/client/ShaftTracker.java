@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import dev.shafthelper.config.ModConfig;
 import dev.shafthelper.core.AreaDetector;
+import dev.shafthelper.core.DropTracker;
 import dev.shafthelper.core.Format;
 import dev.shafthelper.core.Gemstone;
 import dev.shafthelper.core.HttpFetcher;
@@ -48,6 +49,7 @@ public final class ShaftTracker {
     private static final HttpFetcher FETCHER = HttpFetcher.real();
     private static final ShaftLog LOG = new ShaftLog();
     private static final ProcTracker PROCS = new ProcTracker();
+    private static final DropTracker DROPS = new DropTracker();
 
     private static ModConfig config;
     private static Path configPath;
@@ -86,18 +88,21 @@ public final class ShaftTracker {
         String messageStr = message.getString();
         String lower = messageStr.toLowerCase(Locale.ROOT);  
         Map<String, Double> current = prices;
-        if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {
-            refreshHudLines();
-        } else if (ProcTracker.isLobbySwitch(messageStr)) {
-            double finalProfit = PROCS.totalProfit();
-            LOG.leave(finalProfit);
-            LOG.clear();
-            PROCS.resetSession();
-            currentLapisCorpses = -1;
-            currentUmberCorpses = -1;
-            currentTungstenCorpses = -1;
-            detectedShaft = Optional.empty();
-            refreshHudLines();
+        if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {  
+            refreshHudLines();  
+        } else if (DROPS.record(messageStr)) {  
+            refreshHudLines();  
+        } else if (ProcTracker.isLobbySwitch(messageStr)) {  
+            double finalProfit = PROCS.totalProfit();  
+            LOG.leave(finalProfit);  
+            LOG.clear();  
+            PROCS.resetSession();  
+            DROPS.resetSession();  
+            currentLapisCorpses = -1;  
+            currentUmberCorpses = -1;  
+            currentTungstenCorpses = -1;  
+            detectedShaft = Optional.empty();  
+            refreshHudLines();  
         }
     }
 
@@ -108,7 +113,7 @@ public final class ShaftTracker {
         if (connection == null || client.level == null) {
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
-            PROCS.resetAll();
+            PROCS.resetSession();
             currentLapisCorpses = -1;
             currentUmberCorpses = -1;
             currentTungstenCorpses = -1;
@@ -321,6 +326,7 @@ public final class ShaftTracker {
         if (config.miningSpeed > 0 && current != null) {  
             profit.addAll(trackerLine(current));  
         }  
+        profit.addAll(dropTrackerLines());  
         profitLines = profit;  
   
         // --- Log box: this session's shafts ---  
@@ -402,6 +408,30 @@ public final class ShaftTracker {
             });
         
         return lines;
+    }
+
+    private static List<Component> dropTrackerLines() {  
+        List<Component> lines = new ArrayList<>();  
+        if (DROPS.isEmpty()) return lines;  
+  
+        Map<String, Long> rare = DROPS.rareDrops();  
+        if (!rare.isEmpty()) {  
+            lines.add(header("Rare Drops"));  
+            rare.forEach((name, count) -> lines.add(gray("  " + name + ": " + count)));  
+        }  
+  
+        Map<String, Long> fiesta = DROPS.fiesta();  
+        if (!fiesta.isEmpty()) {  
+            lines.add(header("Mining Fiesta"));  
+            fiesta.forEach((name, count) -> lines.add(gray("  " + name + ": " + Format.compact(count))));  
+        }  
+  
+        Map<String, Long> sacks = DROPS.sacks();  
+        if (!sacks.isEmpty()) {  
+            lines.add(header("Sacks"));  
+            sacks.forEach((name, count) -> lines.add(gray("  " + name + ": " + Format.compact(count))));  
+        }  
+        return lines;  
     }
 
     private static String minutes(long elapsedMs) {

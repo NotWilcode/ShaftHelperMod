@@ -1,12 +1,12 @@
 package dev.shafthelper.client;  
   
-import java.util.List;  
-  
-import dev.shafthelper.config.ModConfig;  
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;  
-import net.minecraft.client.DeltaTracker;  
-import net.minecraft.client.Minecraft;  
-import net.minecraft.client.gui.Font;  
+import java.util.List;
+
+import dev.shafthelper.config.ModConfig;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;  
 import net.minecraft.network.chat.Component;  
   
@@ -34,9 +34,9 @@ public final class ShaftProfitHud implements HudElement {
         int x = position(config.profitX, graphics.guiWidth(), scaledWidth);  
         int top = position(config.profitY, graphics.guiHeight(), scaledHeight);  
   
-        int bg = config.themeBg;
-        int border = config.themeBorder;
-        int text = config.themeText;
+        int bg = config.themeBg;  
+        int border = config.themeBorder;  
+        int text = config.themeText;  
         int l = x - 2, t = top - 2, r = x + scaledWidth + 2, b = top + scaledHeight + 2;  
         graphics.fill(l, t, r, b, bg);  
         graphics.fill(l, t, r, t + 1, border);  
@@ -44,7 +44,7 @@ public final class ShaftProfitHud implements HudElement {
         graphics.fill(l, t, l + 1, b, border);  
         graphics.fill(r - 1, t, r, b, border);  
   
-        int lineStep = Math.max(1, (int) Math.round(LINE_HEIGHT * config.profitScale));
+        int lineStep = Math.max(1, (int) Math.round(LINE_HEIGHT * config.profitScale));  
         int y = top;  
         for (Component line : lines) {  
             graphics.text(font, line, x, y, text, true);  

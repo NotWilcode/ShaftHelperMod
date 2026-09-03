@@ -65,6 +65,11 @@ public final class ModConfig {
     public boolean corpseWaypointsEnabled = true;
     public boolean corpseFinderEnabled = true;
     public boolean waypointLineEnabled = true;
+    public boolean dropTrackerEnabled = true;
+
+    public double dropX = 0.0;  
+    public double dropY = 60.0;  
+    public double dropScale = 1.0;
 
     public double orderedDistance = 2.0;
     public double orderedChunks = 64;
