@@ -64,6 +64,7 @@ public final class ModConfig {
     public boolean orderedWaypointsEnabled = true;
     public boolean corpseWaypointsEnabled = true;
     public boolean corpseFinderEnabled = true;
+    public boolean waypointLineEnabled = true;
 
     public double orderedDistance = 2.0;
     public double orderedChunks = 64;
