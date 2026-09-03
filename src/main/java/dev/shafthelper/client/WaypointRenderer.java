@@ -13,6 +13,7 @@ import org.joml.Matrix4fc;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
+import dev.shafthelper.ShaftHelperClient;
 import dev.shafthelper.core.AreaDetector;
 import dev.shafthelper.core.Waypoint;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -29,9 +30,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 
 public final class WaypointRenderer {  
-    private static final int COLOR_CURRENT = 0xFF778DA9; // green  
-    private static final int COLOR_NEXT    = 0xE00D1B2A; // yellow  
-    private static final int COLOR_PAST    = 0x90202020; // red  
     private static final float NAME_TAG_BASE_SCALE = 1.0f;
     private static final float NAME_TAG_DISTANCE_THRESHOLD = 12.0f;
     
@@ -87,6 +85,14 @@ public final class WaypointRenderer {
             poseStack.popPose();  
         }  
 
+    }
+
+    private static int themedColor(dev.shafthelper.config.ModConfig config, int role) {
+        return switch (role) {
+            case 0 -> config.themeAccent;
+            case 1 -> config.themeText;
+            default -> config.themeTextOff;
+        };
     }
 
     private static Integer orderOf(Waypoint wp) {  
@@ -155,7 +161,7 @@ public final class WaypointRenderer {
         var player = client.player;  
     
         dev.shafthelper.config.ModConfig config = ShaftTracker.config();  
-        if (config == null || config.waypoints.isEmpty()) return;  
+        if (config == null) return;
     
         Optional<AreaDetector.Area> currentArea = ShaftTracker.currentArea();  
         String currentIsland = AreaDetector.getDisplayName(currentArea.orElse(AreaDetector.Area.UNKNOWN));  
@@ -174,10 +180,22 @@ public final class WaypointRenderer {
             if (distance > config.orderedChunks) continue;  
             candidates.add(waypoint);  
         }  
+        List<Waypoint> corpseWaypoints = new ArrayList<>();
+        if (config.corpseWaypointsEnabled) {
+            String shaftCode = ShaftTracker.currentShaft().map(shaft -> shaft.code()).orElse("");
+            for (Waypoint waypoint : ShaftHelperClient.corpseWaypoints()) {
+                if (!waypoint.island.isEmpty() && !waypoint.island.equalsIgnoreCase(currentIsland)) continue;
+                if (!groupMatchesShaft(waypoint.group, shaftCode)) continue;
+                if (waypoint.distanceTo(player.getBlockX(), player.getBlockY(), player.getBlockZ()) <= config.orderedChunks) {
+                    corpseWaypoints.add(waypoint);
+                }
+            }
+        }
     
         if (!config.orderedWaypointsEnabled) {  
             // Unchanged behavior: show all, use each waypoint's own color.  
             visibleWaypoints.addAll(candidates);  
+            visibleWaypoints.addAll(corpseWaypoints);
             return;  
         }  
     
@@ -197,6 +215,7 @@ public final class WaypointRenderer {
     
         if (ordered.isEmpty()) {  
             activeOrderedIndex = 0;  
+            visibleWaypoints.addAll(corpseWaypoints);
             return;  
         }  
     
@@ -215,23 +234,24 @@ public final class WaypointRenderer {
             activeOrderedIndex++;  
         }  
     
-        // Assign display colors: past = red, current = green, next = yellow.  
+        // Assign theme colors: passed, current, and next.  
         // Hide anything beyond "next".  
         for (int i = 0; i < ordered.size(); i++) {  
             Waypoint wp = ordered.get(i);  
             int color;  
             if (i < activeOrderedIndex) {  
-                color = COLOR_PAST;  
+                color = themedColor(config, 2);  
             } else if (i == activeOrderedIndex) {  
-                color = COLOR_CURRENT;  
+                color = themedColor(config, 0);  
             } else if (i == activeOrderedIndex + 1) {  
-                color = COLOR_NEXT;  
+                color = themedColor(config, 1);  
             } else {  
                 continue; // future waypoints beyond "next" are not rendered  
             }  
             visibleWaypoints.add(wp);  
             displayColors.put(wp, color);  
         }  
+        visibleWaypoints.addAll(corpseWaypoints);
     }
 
     public static boolean groupMatchesShaft(String group, String shaftCode) {  

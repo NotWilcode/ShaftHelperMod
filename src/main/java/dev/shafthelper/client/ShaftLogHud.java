@@ -32,7 +32,7 @@ public final class ShaftLogHud implements HudElement {
         int scaledWidth = Math.max(1, (int) Math.round(width * config.logScale));  
         int scaledHeight = Math.max(1, (int) Math.round(lines.size() * LINE_HEIGHT * config.logScale));  
         int x = position(config.logX, graphics.guiWidth(), scaledWidth);  
-        int top = position(config.logY, graphics.guiHeight(), scaledHeight);  
+        int top = topPosition(config.logY, graphics.guiHeight());  
   
         int bg = config.themeBg;
         int border = config.themeBorder;
@@ -56,4 +56,9 @@ public final class ShaftLogHud implements HudElement {
         int available = Math.max(0, screen - size - 2 * EDGE);  
         return EDGE + (int) Math.round(available * Math.clamp(percent, 0.0, 100.0) / 100.0);  
     }  
+
+    private static int topPosition(double percent, int screen) {
+        int available = Math.max(0, screen - 2 * EDGE);
+        return EDGE + (int) Math.round(available * Math.clamp(percent, 0.0, 100.0) / 100.0);
+    }
 }

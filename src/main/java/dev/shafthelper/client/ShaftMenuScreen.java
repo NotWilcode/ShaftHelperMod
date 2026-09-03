@@ -35,7 +35,7 @@ public final class ShaftMenuScreen extends Screen {
         y += BTN_H + GAP;  
   
         addRenderableWidget(new StyledButton(x, y, BTN_W, BTN_H,  
-            Component.literal("Info"), b -> this.minecraft.setScreen(new ShaftGuideScreen())));  
+            Component.literal("Info"), b -> this.minecraft.setScreen(new ShaftInfoScreen())));  
         y += BTN_H + GAP;  
   
         addRenderableWidget(new StyledButton(x, y, BTN_W, BTN_H,  

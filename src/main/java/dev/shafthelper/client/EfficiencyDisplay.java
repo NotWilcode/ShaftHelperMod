@@ -65,7 +65,7 @@ public final class EfficiencyDisplay implements HudElement {
     private static int getEfficiency() {
         if (expectedBlocks == 0) return 100;
         float eff = (float) blocksMined / expectedBlocks;
-        return Math.round(eff * 100f);
+        return Math.clamp(Math.round(eff * 100f), 0, 100);
     }
 
     @Override

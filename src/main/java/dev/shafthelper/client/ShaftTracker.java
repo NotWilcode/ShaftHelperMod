@@ -91,6 +91,7 @@ public final class ShaftTracker {
         } else if (ProcTracker.isLobbySwitch(messageStr)) {
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
+            LOG.clear();
             PROCS.resetSession();
             currentLapisCorpses = -1;
             currentUmberCorpses = -1;
@@ -108,10 +109,13 @@ public final class ShaftTracker {
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
             PROCS.resetAll();
+            LOG.clear();
             currentLapisCorpses = -1;
             currentUmberCorpses = -1;
             currentTungstenCorpses = -1;
             detectedShaft = Optional.empty();
+            missingShaftScans = 0;
+            logLines = List.of();
             trackerLines = List.of();
             return;
         }
@@ -121,20 +125,18 @@ public final class ShaftTracker {
         readLapisCorpses(lines);
         detectedArea = AreaDetector.detect(lines);
   
-        if (detectedShaft.isPresent() && (currentLapisCorpses >= 0 || currentUmberCorpses >= 0 || currentTungstenCorpses >= 0)) {  
-            LOG.updateCurrentCorpses(currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses);  
-        }
-
         Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);
         
         // Check if shaft status changed (entered, left, or switched)
         if (shaft.isPresent() && !detectedShaft.isPresent()) {
             // Entering a shaft
+            missingShaftScans = 0;
             double initialProfit = PROCS.totalProfit();
             LOG.enter(shaft.get(), currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses, System.currentTimeMillis(), initialProfit);
             detectedShaft = shaft;
         } else if (shaft.isPresent() && detectedShaft.isPresent() && !shaft.get().code().equals(detectedShaft.get().code())) {
             // Switching shafts
+            missingShaftScans = 0;
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
             double initialProfit = PROCS.totalProfit();
@@ -142,9 +144,17 @@ public final class ShaftTracker {
             detectedShaft = shaft;
         } else if (!shaft.isPresent() && detectedShaft.isPresent()) {
             // Leaving a shaft
-            double finalProfit = PROCS.totalProfit();
-            LOG.leave(finalProfit);
-            detectedShaft = Optional.empty();
+            if (++missingShaftScans >= 2) {
+                double finalProfit = PROCS.totalProfit();
+                LOG.leave(finalProfit);
+                detectedShaft = Optional.empty();
+                missingShaftScans = 0;
+            }
+        }
+
+        if (detectedShaft.isPresent()
+            && (currentLapisCorpses >= 0 || currentUmberCorpses >= 0 || currentTungstenCorpses >= 0)) {
+            LOG.updateCurrentCorpses(currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses);
         }
 
         applyMineshaftGroupToggle();
@@ -229,6 +239,7 @@ public final class ShaftTracker {
 
     /** Currently detected shaft from tab list (separate from log for proper tracking) */
     private static volatile Optional<ShaftDetector.Shaft> detectedShaft = Optional.empty();
+    private static int missingShaftScans;
 
     /** Currently detected area from tab list/scoreboard */
     private static volatile Optional<AreaDetector.Area> detectedArea = Optional.empty();
@@ -317,9 +328,10 @@ public final class ShaftTracker {
   
         // --- Log box: this session's shafts ---  
         List<Component> log = new ArrayList<>();  
+        List<ShaftLog.Entry> entries = LOG.entries();
         if (!LOG.isEmpty()) {  
             log.add(gray("This session:"));  
-            for (ShaftLog.Entry entry : LOG.entries()) {  
+            for (ShaftLog.Entry entry : entries) {  
                 String shaftLabel = entry.number() + " " + entry.code();  
                 String corpseLabel = "";  
                 if (entry.lapisCorpses() >= 0) corpseLabel += entry.lapisCorpses() + "l";  
@@ -327,8 +339,8 @@ public final class ShaftTracker {
                 if (entry.tungstenCorpses() >= 0) corpseLabel += entry.tungstenCorpses() + "t";  
                 if (!corpseLabel.isEmpty()) shaftLabel += " " + corpseLabel;  
                 log.add(gemColored(entry.gem(), shaftLabel));  
-                if (currentShaft().isPresent() && currentShaft().get().gem().name().equals(entry.gem().name())  
-                    && currentShaft().get().code().equals(entry.code())) {  
+                if (entry.number() == entries.size() && currentShaft().isPresent()
+                    && currentShaft().get().code().equals(entry.code())) {
                     double shaftProfit = PROCS.totalProfit() - entry.initialProfit();  
                     if (shaftProfit > 0) log.add(gray("  Total: " + Format.compact(shaftProfit)));  
                 } else {  

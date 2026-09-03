@@ -1,0 +1,47 @@
+[
+    {
+      "name": "Corpse",
+      "x": -127,
+      "y": 7,
+      "z": -170,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -114,
+      "y": 19,
+      "z": -166,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -186,
+      "y": 1,
+      "z": -196,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -113,
+      "y": 13,
+      "z": -187,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -177,
+      "y": 10,
+      "z": -170,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    }
+]

@@ -62,6 +62,7 @@ public final class ModConfig {
     public boolean miningDeployableTimerEnabled = true;
     public boolean presetsAutoImported = false;
     public boolean orderedWaypointsEnabled = true;
+    public boolean corpseWaypointsEnabled = true;
 
     public double orderedDistance = 2.0;
     public double orderedChunks = 64;

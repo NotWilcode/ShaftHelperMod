@@ -186,7 +186,7 @@ public final class MiningCalculator implements HudElement {
     }
 
     private static final int EDGE = 4;
-    private static final int BOX_HEIGHT = 85; // Increased to accommodate TPS display
+    private static final int BOX_HEIGHT = 85;
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -269,17 +269,14 @@ public final class MiningCalculator implements HudElement {
             ) + 10; // Add padding
             
             int height = BOX_HEIGHT; // Use fixed height instead of dynamic calculation
-            int x = position(config.calcX, graphics.guiWidth(), width);  
-            int top = position(config.calcY, graphics.guiHeight(), height);  
-    
             int bg = config.themeBg;
             int border = config.themeBorder;
             int text = config.themeText;
             int accent = config.themeAccent;
             int scaledWidth = Math.max(1, (int) Math.round(width * config.calcScale));
             int scaledHeight = Math.max(1, (int) Math.round(height * config.calcScale));
-            x = position(config.calcX, graphics.guiWidth(), scaledWidth);
-            top = position(config.calcY, graphics.guiHeight(), scaledHeight);
+            int x = position(config.calcX, graphics.guiWidth(), scaledWidth);
+            int top = position(config.calcY, graphics.guiHeight(), scaledHeight);
 
             int l = x - 2, t = top - 2, r = x + scaledWidth + 2, b = top + scaledHeight + 2;  
             graphics.fill(l, t, r, b, bg);  
@@ -289,30 +286,31 @@ public final class MiningCalculator implements HudElement {
             graphics.fill(r - 1, t, r, b, border);  
             int y = top;  
             int inset = Math.max(1, (int) Math.round(5 * config.calcScale));
-            int lineGap = Math.max(1, (int) Math.round(10 * config.calcScale));
+            int lineGap = Math.max(1, (int) Math.round(font.lineHeight * config.calcScale));
             
             // Draw gemstone/block name
-            graphics.text(font, Component.literal(displayName), x + inset, y + inset, accent, true);
+            int textY = y + inset;
+            graphics.text(font, Component.literal(displayName), x + inset, textY, accent, true);
             
             // Draw mining ticks needed
-            graphics.text(font, Component.literal(String.format("Ticks: %.0f", ticksNeeded)), x + inset, y + lineGap, text, true);
+            graphics.text(font, Component.literal(String.format("Ticks: %.0f", ticksNeeded)), x + inset, textY + lineGap, text, true);
             
             // Draw ping offset
-            graphics.text(font, Component.literal(String.format("Offset: %.1f", pingOffset)), x + inset, y + lineGap * 2, text, true);
+            graphics.text(font, Component.literal(String.format("Offset: %.1f", pingOffset)), x + inset, textY + lineGap * 2, text, true);
             
             // Draw status
             String statusText = timeoutExceeded ? "MOVE NOW" : "MINING...";
             int statusColor = timeoutExceeded ? accent : 0xFFFFFF00;
-            graphics.text(font, Component.literal(statusText), x + inset, y + lineGap * 3, statusColor, true);
+            graphics.text(font, Component.literal(statusText), x + inset, textY + lineGap * 3, statusColor, true);
             
             // Draw ping info
-            graphics.text(font, Component.literal(String.format("Ping: %dms", ping)), x + inset, y + lineGap * 4, text, true);
+            graphics.text(font, Component.literal(String.format("Ping: %dms", ping)), x + inset, textY + lineGap * 4, text, true);
             
             // Draw TPS info
-            graphics.text(font, Component.literal(String.format("TPS: %.1f", tps)), x + inset, y + lineGap * 5, text, true);
+            graphics.text(font, Component.literal(String.format("TPS: %.1f", tps)), x + inset, textY + lineGap * 5, text, true);
             
             // Draw mining speed
-            graphics.text(font, Component.literal(String.format("Speed: %.1f", actualMiningSpeed)), x + inset, y + lineGap * 6, text, true);
+            graphics.text(font, Component.literal(String.format("Speed: %.1f", actualMiningSpeed)), x + inset, textY + lineGap * 6, text, true);
         } catch (Exception e) {
             // Silently fail if there's any error
         }

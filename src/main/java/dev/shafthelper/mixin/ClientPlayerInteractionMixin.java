@@ -2,7 +2,6 @@ package dev.shafthelper.mixin;
   
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;  
 import net.minecraft.world.InteractionHand;  
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;  
@@ -14,14 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
   
 @Mixin(MultiPlayerGameMode.class)  
 public class ClientPlayerInteractionMixin {  
-  
-    @Inject(method = "destroyBlock", at = @At(value = "RETURN"), cancellable = true)  
-    private void onDestroyBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {  
-        if (cir.getReturnValue()) {  
-            dev.shafthelper.client.EfficiencyDisplay.onBlockMined();  
-            dev.shafthelper.client.MiningCalculator.onBlockMined();  
-        }  
-    }  
   
     // Right-click with item in hand (deploying the lantern)  
     @Inject(method = "useItem", at = @At("HEAD"))  

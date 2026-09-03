@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
+import java.util.ArrayList;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -27,6 +28,7 @@ import dev.shafthelper.client.TickDisplay;
 import dev.shafthelper.client.WaypointRenderer;
 import dev.shafthelper.command.ShaftCommand;
 import dev.shafthelper.core.AreaDetector;
+import dev.shafthelper.core.ShaftDetector;
 import dev.shafthelper.core.Waypoint;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -38,11 +40,15 @@ import net.minecraft.resources.Identifier;
 
 public class ShaftHelperClient implements ClientModInitializer {
 
+    private static final String CORPSE_WAYPOINT_RESOURCE = "/assets/shafthelper/corpse_waypoints/";
+    private static List<Waypoint> corpseWaypoints = List.of();
+
     @Override
     public void onInitializeClient() {
         ShaftTracker.init();
         extractPresets();
         autoImportPresets();
+        corpseWaypoints = loadCorpseWaypoints();
         ClientCommandRegistrationCallback.EVENT.register(
             (dispatcher, registryAccess) -> ShaftCommand.register(dispatcher));
         ClientTickEvents.END_CLIENT_TICK.register(ShaftTracker::onEndTick);
@@ -64,6 +70,84 @@ public class ShaftHelperClient implements ClientModInitializer {
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "pickaxe_ability_alert"), new PickaxeAbilityAlert());
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_profit_hud"), new ShaftProfitHud());  
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "shaft_log_hud"), new ShaftLogHud());
+    }
+
+    public static List<Waypoint> corpseWaypoints() {
+        return corpseWaypoints;
+    }
+
+    private List<Waypoint> loadCorpseWaypoints() {
+        List<Waypoint> loaded = new ArrayList<>();
+        try (InputStream index = getClass().getResourceAsStream(CORPSE_WAYPOINT_RESOURCE + "index.json")) {
+            if (index == null) return List.of();
+            List<String> names = new Gson().fromJson(new String(index.readAllBytes()),
+                new TypeToken<List<String>>(){}.getType());
+            if (names == null) return List.of();
+
+            Gson gson = new GsonBuilder().create();
+            for (String name : names) {
+                if (name == null || !name.endsWith(".json") || name.contains("/") || name.contains("\\")) continue;
+                try (InputStream file = getClass().getResourceAsStream(CORPSE_WAYPOINT_RESOURCE + name)) {
+                    if (file == null) continue;
+                    addWaypointJson(loaded, new String(file.readAllBytes()), gson, name);
+                }
+            }
+        } catch (Exception ignored) {
+            return List.of();
+        }
+        return List.copyOf(loaded);
+    }
+
+    private void addWaypointJson(List<Waypoint> target, String json, Gson gson, String fileName) {
+        JsonElement root = JsonParser.parseString(json);
+        JsonArray elements = new JsonArray();
+        if (root.isJsonArray()) elements = root.getAsJsonArray();
+        else if (root.isJsonObject()) elements.add(root);
+
+        String headerGroup = null;
+        String headerIsland = "Mineshafts";
+        boolean firstElement = true;
+        String fileGroup = groupFromFileName(fileName);
+        for (JsonElement element : elements) {
+            if (!element.isJsonObject()) {
+                firstElement = false;
+                continue;
+            }
+            JsonObject object = element.getAsJsonObject();
+            boolean isHeader = firstElement
+                && (object.has("group") || object.has("area"))
+                && !object.has("x") && !object.has("y") && !object.has("z")
+                && !object.has("options");
+            firstElement = false;
+            if (isHeader) {
+                if (object.has("group")) headerGroup = object.get("group").getAsString();
+                if (object.has("area")) headerIsland = object.get("area").getAsString();
+                continue;
+            }
+
+            Waypoint waypoint = parseWaypoint(object, gson);
+            if (waypoint == null || waypoint.name == null || waypoint.name.isEmpty()) continue;
+            waypoint.group = fileGroup != null
+                ? fileGroup
+                : (headerGroup != null ? headerGroup : "Corpse Locations");
+            waypoint.island = headerIsland;
+            waypoint.enabled = true;
+            target.add(waypoint);
+        }
+    }
+
+    private String groupFromFileName(String fileName) {
+        String stem = fileName.substring(0, fileName.length() - ".json".length());
+        if (stem.equalsIgnoreCase("Crystal")) return "JASP_C";
+
+        for (String code : ShaftDetector.CODES.keySet()) {
+            String prefix = ShaftDetector.CODES.get(code).name();
+            if (stem.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                String suffix = stem.substring(prefix.length());
+                if (suffix.matches("[0-9]+")) return code + "_" + suffix;
+            }
+        }
+        return null;
     }
 
     private void extractPresets() {  
@@ -163,7 +247,7 @@ public class ShaftHelperClient implements ClientModInitializer {
     }  
     
     // Mirrors ConfigScreen's SkyBlock-vs-plain handling  
-    private Waypoint parseWaypoint(JsonObject obj, Gson gson) {  
+    private static Waypoint parseWaypoint(JsonObject obj, Gson gson) {  
         boolean sbFormat = obj.has("options") || obj.has("r") || obj.has("g") || obj.has("b");  
         if (sbFormat) {  
             double x = obj.has("x") ? obj.get("x").getAsDouble() : 0;  

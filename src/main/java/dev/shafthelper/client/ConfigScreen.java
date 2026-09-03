@@ -335,6 +335,12 @@ private final ModConfig config = ShaftTracker.config();
             config.orderedWaypointsEnabled, v -> config.orderedWaypointsEnabled = v)));  
         addLabel("Ordered Waypoints", y);  
         y += ROW_HEIGHT;  
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.corpseWaypointsEnabled, v -> config.corpseWaypointsEnabled = v)));
+        addLabel("Corpse Waypoints", y);
+        y += ROW_HEIGHT;
         
         y = labeledDouble(statLabels[8], y, config.orderedDistance, 1, 100, v -> config.orderedDistance = v);
         y = labeledDouble(statLabels[9], y, config.orderedChunks, 1, 100, v -> config.orderedChunks = v);

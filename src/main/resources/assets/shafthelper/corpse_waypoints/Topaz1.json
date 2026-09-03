@@ -1,0 +1,39 @@
+[
+    {
+      "name": "Corpse",
+      "x": -131,
+      "y": 26,
+      "z": -192,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -123,
+      "y": 7,
+      "z": -171,
+      "group": "TOPA_1",
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -190,
+      "y": 5,
+      "z": -178,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    },
+    {
+      "name": "Corpse",
+      "x": -160,
+      "y": 4,
+      "z": -157,
+      "island": "Mineshafts",
+      "enabled": false,
+      "color": 16711680
+    }
+]
