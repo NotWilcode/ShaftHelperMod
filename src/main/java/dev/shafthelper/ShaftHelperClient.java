@@ -3,9 +3,9 @@ package dev.shafthelper;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.ArrayList;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -89,7 +89,13 @@ public class ShaftHelperClient implements ClientModInitializer {
                 if (name == null || !name.endsWith(".json") || name.contains("/") || name.contains("\\")) continue;
                 try (InputStream file = getClass().getResourceAsStream(CORPSE_WAYPOINT_RESOURCE + name)) {
                     if (file == null) continue;
-                    addWaypointJson(loaded, new String(file.readAllBytes()), gson, name);
+                    String json = new String(file.readAllBytes()).trim();
+                    if (json.isEmpty()) continue;
+                    try {
+                        addWaypointJson(loaded, json, gson, name);
+                    } catch (RuntimeException ignored) {
+                        // One invalid optional corpse file must not hide the valid files.
+                    }
                 }
             }
         } catch (Exception ignored) {
@@ -105,7 +111,7 @@ public class ShaftHelperClient implements ClientModInitializer {
         else if (root.isJsonObject()) elements.add(root);
 
         String headerGroup = null;
-        String headerIsland = "Mineshafts";
+        String headerIsland = "Mineshaft";
         boolean firstElement = true;
         String fileGroup = groupFromFileName(fileName);
         for (JsonElement element : elements) {
@@ -139,12 +145,18 @@ public class ShaftHelperClient implements ClientModInitializer {
     private String groupFromFileName(String fileName) {
         String stem = fileName.substring(0, fileName.length() - ".json".length());
         if (stem.equalsIgnoreCase("Crystal")) return "JASP_C";
+        if (stem.regionMatches(true, 0, "Tungstun", 0, "Tungstun".length())) {
+            String suffix = stem.substring("Tungstun".length());
+            if (suffix.matches("[0-9]+")) return "TUNG_" + suffix;
+        }
 
         for (String code : ShaftDetector.CODES.keySet()) {
-            String prefix = ShaftDetector.CODES.get(code).name();
-            if (stem.regionMatches(true, 0, prefix, 0, prefix.length())) {
-                String suffix = stem.substring(prefix.length());
-                if (suffix.matches("[0-9]+")) return code + "_" + suffix;
+            String[] prefixes = {code, ShaftDetector.CODES.get(code).name()};
+            for (String prefix : prefixes) {
+                if (stem.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                    String suffix = stem.substring(prefix.length());
+                    if (suffix.matches("[0-9]+")) return code + "_" + suffix;
+                }
             }
         }
         return null;
