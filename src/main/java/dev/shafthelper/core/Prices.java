@@ -29,6 +29,11 @@ public final class Prices {
     public static final List<String> GEM_PRODUCT_IDS = Gemstones.ALL.stream()
         .flatMap(gem -> List.of(gem.roughId(), gem.flawedId(), gem.flawlessId()).stream())
         .toList();
+    public static final List<String> ALL_PRODUCT_IDS =  
+        java.util.stream.Stream.concat(  
+            GEM_PRODUCT_IDS.stream(),  
+            DropTracker.PRODUCT_IDS.stream()  
+        ).distinct().toList();
 
     private static final ExecutorService EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -86,10 +91,10 @@ public final class Prices {
                     } catch (Exception error) {
                         live = new HashMap<>();
                     }
-                    History.Averages averages = History.fetchAverages(GEM_PRODUCT_IDS, fetcher, now, 1_000);
+                    History.Averages averages = History.fetchAverages(ALL_PRODUCT_IDS, fetcher, now, 1_000);
                     // Averages win; the live snapshot fills in any product the history API could not serve.
                     Map<String, Double> merged = new HashMap<>(live);
-                    Bazaar.extractPrices(averages.products(), GEM_PRODUCT_IDS, mode).forEach((id, price) -> {
+                    Bazaar.extractPrices(averages.products(), ALL_PRODUCT_IDS, mode).forEach((id, price) -> {
                         if (Double.isFinite(price) && price > 0) merged.put(id, price);
                     });
                     listed = merged;
@@ -116,7 +121,7 @@ public final class Prices {
 
     private static LivePrices livePrices(Mode mode, HttpFetcher fetcher, long now) throws Exception {
         Bazaar.Snapshot snapshot = Bazaar.fetch(fetcher, now);
-        return new LivePrices(Bazaar.extractPrices(snapshot.products(), GEM_PRODUCT_IDS, mode),
+        return new LivePrices(Bazaar.extractPrices(snapshot.products(), ALL_PRODUCT_IDS, mode),
             snapshot.lastUpdated());
     }
 

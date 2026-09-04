@@ -81,17 +81,19 @@ public final class ShaftTracker {
 
     public static List<Component> trackerLines() { return trackerLines; }
     public static List<Component> profitLines() { return profitLines; }
-    public static List<Component> logLines() { return logLines; }
-
-    /** Chat listener hook: counts Hypixel's "PRISTINE!" proc messages for the profit tracker. */
-    public static void onGameMessage(Component message) {
-        String messageStr = message.getString();
+    public static List<Component> logLines() { return logLines; } 
+  
+    public static void onGameMessage(Component message) {  
+        String messageStr = message.getString();  
         String lower = messageStr.toLowerCase(Locale.ROOT);  
-        Map<String, Double> current = prices;
+        Map<String, Double> current = prices;  
         if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {  
             refreshHudLines();  
-        } else if (DROPS.record(messageStr)) {  
-            refreshHudLines();  
+        } else if (config.dropTrackerEnabled && lower.contains("[sacks]")) {  
+            String hover = extractHoverText(message);  
+            // DEBUG: confirm the real tooltip format in-game, then remove this line.  
+            System.out.println("[DropTracker] sack hover=\n" + hover);  
+            if (DROPS.recordSackHover(hover)) refreshHudLines();  
         } else if (ProcTracker.isLobbySwitch(messageStr)) {  
             double finalProfit = PROCS.totalProfit();  
             LOG.leave(finalProfit);  
@@ -103,9 +105,26 @@ public final class ShaftTracker {
             currentTungstenCorpses = -1;  
             detectedShaft = Optional.empty();  
             refreshHudLines();  
-        }
+        }  
+    }  
+  
+    /** Walks a chat component + siblings and concatenates every ShowText hover tooltip. */  
+    private static String extractHoverText(Component component) {  
+        StringBuilder sb = new StringBuilder();  
+        collectHover(component, sb);  
+        return sb.toString();  
+    }  
+  
+    private static void collectHover(Component component, StringBuilder sb) {  
+        var hover = component.getStyle().getHoverEvent();  
+        if (hover instanceof net.minecraft.network.chat.HoverEvent.ShowText showText) {  
+            if (sb.length() > 0) sb.append('\n');  
+            sb.append(showText.value().getString());  
+        }  
+        for (Component sibling : component.getSiblings()) {  
+            collectHover(sibling, sb);  
+        }  
     }
-
     public static void onEndTick(Minecraft client) {
         if (++ticks % SCAN_INTERVAL_TICKS != 0) return;
 
@@ -326,8 +345,8 @@ public final class ShaftTracker {
         if (config.miningSpeed > 0 && current != null) {  
             profit.addAll(trackerLine(current));  
         }  
-        profit.addAll(dropTrackerLines());  
-        profitLines = profit;  
+        profit.addAll(dropTrackerLines(current));  
+        profitLines = profit;
   
         // --- Log box: this session's shafts ---  
         List<Component> log = new ArrayList<>();  
@@ -388,50 +407,77 @@ public final class ShaftTracker {
             .toList();  
     }
 
-    /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */
-    private static List<Component> trackerLine(Map<String, Double> current) {
-        List<Component> lines = new ArrayList<>();
-        PROCS.estimate(current, config.pristine, System.currentTimeMillis())
-            .ifPresent(estimate -> {
-                lines.add(Component.literal("Tracker: " + estimate.procs() + " proc"
-                        + (estimate.procs() == 1 ? "" : "s") + " in " + minutes(estimate.elapsedMs()) + " — ")
-                    .withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal("~" + Format.compact(estimate.coinsPerHour()) + "/hr")
-                        .withStyle(ChatFormatting.GOLD)));
-                
-                // Add total profit line under the estimated $/h
-                double totalProfit = PROCS.totalProfit();
-                if (totalProfit > 0) {
-                    lines.add(Component.literal("Total Profit: " + Format.compact(totalProfit))
-                        .withStyle(ChatFormatting.GREEN));
-                }
-            });
-        
-        return lines;
-    }
-
-    private static List<Component> dropTrackerLines() {  
+    private static List<Component> dropTrackerLines(Map<String, Double> current) {  
         List<Component> lines = new ArrayList<>();  
         if (DROPS.isEmpty()) return lines;  
-  
-        Map<String, Long> rare = DROPS.rareDrops();  
-        if (!rare.isEmpty()) {  
-            lines.add(header("Rare Drops"));  
-            rare.forEach((name, count) -> lines.add(gray("  " + name + ": " + count)));  
-        }  
-  
-        Map<String, Long> fiesta = DROPS.fiesta();  
-        if (!fiesta.isEmpty()) {  
-            lines.add(header("Mining Fiesta"));  
-            fiesta.forEach((name, count) -> lines.add(gray("  " + name + ": " + Format.compact(count))));  
-        }  
-  
-        Map<String, Long> sacks = DROPS.sacks();  
-        if (!sacks.isEmpty()) {  
-            lines.add(header("Sacks"));  
-            sacks.forEach((name, count) -> lines.add(gray("  " + name + ": " + Format.compact(count))));  
-        }  
+    
+        appendSection(lines, "Rare Drops:", DROPS.rareDrops(), current);  
+        appendSection(lines, "Mining Fiesta:", DROPS.fiesta(), current);  
+        appendSection(lines, "Sacks:", DROPS.sacks(), current);  
         return lines;  
+    }  
+
+    /** Maps a tracked drop/sack item display name to its Bazaar product id. */  
+    private static String idFor(String name) {  
+        String key = name.toUpperCase(Locale.ROOT).trim()  
+            .replace("'", "")  
+            .replaceAll("[^A-Z0-9]+", "_")  
+            .replaceAll("^_+|_+$", "");  
+        return switch (key) {  
+            case "GLACITE" -> "GLACITE";  
+            case "HARD_STONE", "HARDSTONE" -> "HARD_STONE";  
+            case "REFINED_MINERAL"  -> "REFINED_MINERAL";  
+            case "GLOSSY_GEMSTONE"  -> "GLOSSY_GEMSTONE";  
+            case "MITHRIL", "MITHRIL_ORE" -> "MITHRIL_ORE";  
+            case "TITANIUM", "TITANIUM_ORE" -> "TITANIUM_ORE";  
+            default -> key; // fall back to the normalized name as the id  
+        };  
+    }
+    
+    private static void appendSection(List<Component> lines, String title,  
+                                    Map<String, Long> items, Map<String, Double> prices) {  
+        if (items.isEmpty()) return;  
+        lines.add(header(title));  
+        for (Map.Entry<String, Long> e : items.entrySet()) {  
+            long count = e.getValue();  
+            double price = prices == null ? 0.0 : prices.getOrDefault(idFor(e.getKey()), 0.0);  
+            String text = "  " + e.getKey() + ": " + count  
+                + (price > 0 ? " (" + Format.compact(count * price) + ")" : "");  
+            lines.add(gray(text));  
+        }  
+    }
+
+    /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */  
+    private static List<Component> trackerLine(Map<String, Double> current) {  
+        List<Component> lines = new ArrayList<>();  
+        PROCS.estimate(current, config.pristine, System.currentTimeMillis())  
+            .ifPresent(estimate -> {  
+                lines.add(Component.literal("Tracker: " + estimate.procs() + " proc"  
+                        + (estimate.procs() == 1 ? "" : "s") + " in " + minutes(estimate.elapsedMs()) + " — ")  
+                    .withStyle(ChatFormatting.GRAY)  
+                    .append(Component.literal("~" + Format.compact(estimate.coinsPerHour()) + "/hr")  
+                        .withStyle(ChatFormatting.GOLD)));  
+            });  
+  
+        // Exact profit from sack data (not pristine-math estimation).  
+        double sackProfit = sackProfit(current);  
+        if (sackProfit > 0) {  
+            lines.add(Component.literal("Total Profit: " + Format.compact(sackProfit))  
+                .withStyle(ChatFormatting.GREEN));  
+        }  
+  
+        return lines;  
+    }  
+  
+    /** Sums the real coin value of everything counted in the sack breakdown. */  
+    private static double sackProfit(Map<String, Double> current) {  
+        if (current == null) return 0;  
+        double total = 0;  
+        for (Map.Entry<String, Long> entry : DROPS.sacks().entrySet()) {  
+            String id = idFor(entry.getKey());  
+            total += entry.getValue() * current.getOrDefault(id, 0.0);  
+        }  
+        return total;  
     }
 
     private static String minutes(long elapsedMs) {

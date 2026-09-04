@@ -68,8 +68,8 @@ public final class PickaxeAbilityAlert implements HudElement {
 
         Font font = client.font;
         String text = "Pickaxe ability ready";
-        int width = Math.max(320, font.width(text) + 48);
-        int height = 56;
+        int width = Math.max(160, font.width(text) + 48);
+        int height = 50;
         int x = (graphics.guiWidth() - width) / 2;
         int y = Math.max(40, graphics.guiHeight() / 5);
 

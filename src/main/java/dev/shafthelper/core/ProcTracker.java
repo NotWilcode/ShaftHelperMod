@@ -38,30 +38,18 @@ public final class ProcTracker {
         return record(message, null, 0, now);
     }
 
-    /** Feeds a chat line through the proc pattern with prices for total profit tracking. */
-    public synchronized boolean record(String message, Map<String, Double> prices, double pristine, long now) {
-        if (message == null) return false;
-        Matcher matcher = PROC.matcher(message.replaceAll("\u00a7.", ""));
-        if (!matcher.find()) return false;
-        Gemstone gem = BY_NAME.get(matcher.group(1).trim().toLowerCase(Locale.ROOT));
-        if (gem == null) return false;
-        long count = Long.parseLong(matcher.group(2).replace(",", ""));
-        if (procs == 0) startedAt = now;
-        flawed.merge(gem, count, Long::sum);
-        procs += 1;
-        
-        // Add to total profit if prices are available
-        if (prices != null) {
-            double flawedValue = count * prices.getOrDefault(gem.flawedId(), 0.0);
-            double roughValue = 0;
-            double chance = Mining.pristineChance(pristine);
-            if (chance > 0) {
-                roughValue = count * ((1 - chance) / chance) * prices.getOrDefault(gem.roughId(), 0.0);
-            }
-            totalProfit += (flawedValue + roughValue);
-        }
-        
-        return true;
+    /** Feeds a chat line through the proc pattern with prices for estimated profit tracking only. */
+    public synchronized boolean record(String message, Map<String, Double> prices, double pristine, long now) {  
+        if (message == null) return false;  
+        Matcher matcher = PROC.matcher(message.replaceAll("\u00a7.", ""));  
+        if (!matcher.find()) return false;  
+        Gemstone gem = BY_NAME.get(matcher.group(1).trim().toLowerCase(Locale.ROOT));  
+        if (gem == null) return false;  
+        long count = Long.parseLong(matcher.group(2).replace(",", ""));  
+        if (procs == 0) startedAt = now;  
+        flawed.merge(gem, count, Long::sum);  
+        procs += 1;  
+        return true;  
     }
 
     /** Checks if a message indicates a lobby switch (for resetting the session tracker). */
