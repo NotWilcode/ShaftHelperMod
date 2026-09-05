@@ -15,6 +15,7 @@ import dev.shafthelper.core.Format;
 import dev.shafthelper.core.Gemstone;
 import dev.shafthelper.core.HttpFetcher;
 import dev.shafthelper.core.Mining;
+import dev.shafthelper.core.MiningCalc;
 import dev.shafthelper.core.Prices;
 import dev.shafthelper.core.Pristine;
 import dev.shafthelper.core.ProcTracker;
@@ -51,6 +52,8 @@ public final class ShaftTracker {
     private static final ShaftLog LOG = new ShaftLog();
     private static final ProcTracker PROCS = new ProcTracker();
     private static final DropTracker DROPS = new DropTracker();
+    private static int disconnectScans;
+    private static int leftMiningScans;
 
     private static ModConfig config;
     private static Path configPath;
@@ -84,29 +87,16 @@ public final class ShaftTracker {
     public static List<Component> profitLines() { return profitLines; }
     public static List<Component> logLines() { return logLines; } 
   
-    public static void onGameMessage(Component message) {  
+    public static void onGameMessage(Component message) {
         String messageStr = message.getString();  
         String lower = messageStr.toLowerCase(Locale.ROOT);  
-        Map<String, Double> current = prices;  
-        if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {  
-            refreshHudLines();  
-        } else if (config.dropTrackerEnabled && lower.contains("[sacks]")) {  
-            String hover = extractHoverText(message);  
-            // DEBUG: confirm the real tooltip format in-game, then remove this line.  
-            System.out.println("[DropTracker] sack hover=\n" + hover);  
-            if (DROPS.recordSackHover(hover)) refreshHudLines();  
-        } else if (ProcTracker.isLobbySwitch(messageStr)) {  
-            double finalProfit = PROCS.totalProfit();  
-            LOG.leave(finalProfit);  
-            LOG.clear();  
-            PROCS.resetSession();  
-            DROPS.resetSession();  
-            currentLapisCorpses = -1;  
-            currentUmberCorpses = -1;  
-            currentTungstenCorpses = -1;  
-            detectedShaft = Optional.empty();  
-            refreshHudLines();  
-        }  
+        Map<String, Double> current = prices; 
+            if (PROCS.record(messageStr, current, config.pristine, System.currentTimeMillis())) {  
+                refreshHudLines();  
+            } else if (config.dropTrackerEnabled && lower.contains("[sacks]")) {  
+                String hover = extractHoverText(message);  
+                if (DROPS.recordSackHover(hover)) refreshHudLines();  
+            }
     }  
   
     /** Walks a chat component + siblings and concatenates every ShowText hover tooltip. */  
@@ -126,28 +116,63 @@ public final class ShaftTracker {
             collectHover(sibling, sb);  
         }  
     }
-    public static void onEndTick(Minecraft client) {
-        if (++ticks % SCAN_INTERVAL_TICKS != 0) return;
-
-        ClientPacketListener connection = client.getConnection();
-        if (connection == null || client.level == null) {
-            double finalProfit = PROCS.totalProfit();
-            LOG.leave(finalProfit);
-            PROCS.resetSession();
-            currentLapisCorpses = -1;
-            currentUmberCorpses = -1;
-            currentTungstenCorpses = -1;
-            detectedShaft = Optional.empty();
-            missingShaftScans = 0;
-            return;
-        }
-
-        List<String> lines = collectLines(client, connection);
+    public static void onEndTick(Minecraft client) {  
+        if (++ticks % SCAN_INTERVAL_TICKS != 0) return;  
+    
+        ClientPacketListener connection = client.getConnection();  
+        if (connection == null || client.level == null) {  
+            // A warp restores the connection within a scan or two; only a *sustained*  
+            // null is a real disconnect. Preserve data until we're sure.  
+            if (++disconnectScans >= 4) {  
+                double finalProfit = PROCS.totalProfit();  
+                LOG.leave(finalProfit);  
+                LOG.clear();  
+                PROCS.resetAll();  
+                DROPS.resetSession();  
+                currentLapisCorpses = -1;  
+                currentUmberCorpses = -1;  
+                currentTungstenCorpses = -1;  
+                detectedShaft = Optional.empty();  
+                missingShaftScans = 0;  
+                disconnectScans = 0;  
+            }  
+            return;  
+        }  
+        disconnectScans = 0;  
+    
+        List<String> lines = collectLines(client, connection);  
+        if (config.autoStats) readStats(lines);  
+        readLapisCorpses(lines);  
+        detectedArea = AreaDetector.detect(lines);  
+    
+        // Area-based real-leave detection (now that `lines` and `detectedArea` exist).  
+        AreaDetector.Area area = detectedArea.orElse(AreaDetector.Area.UNKNOWN);  
+        boolean inMining = area == AreaDetector.Area.MINESHAFTS  
+                        || area == AreaDetector.Area.DWARVEN_MINES;  
+        if (!inMining) {  
+            // Warp briefly reports UNKNOWN; require a few consecutive non-mining scans.  
+            if (++leftMiningScans >= 3) {  
+                double finalProfit = PROCS.totalProfit();  
+                LOG.leave(finalProfit);  
+                LOG.clear();  
+                PROCS.resetAll();  
+                DROPS.resetSession();  
+                currentLapisCorpses = -1;  
+                currentUmberCorpses = -1;  
+                currentTungstenCorpses = -1;  
+                detectedShaft = Optional.empty();  
+                missingShaftScans = 0;  
+                leftMiningScans = 0;  
+            }  
+            return;   // don't run shaft-detection logic when not mining  
+        } else {  
+            leftMiningScans = 0;  
+        }  
+    
+        Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);  
         if (config.autoStats) readStats(lines);
         readLapisCorpses(lines);
         detectedArea = AreaDetector.detect(lines);
-  
-        Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);
         
         // Check if shaft status changed (entered, left, or switched)
         if (shaft.isPresent() && !detectedShaft.isPresent()) {
@@ -336,13 +361,52 @@ public final class ShaftTracker {
             tracker.add(header("Shaft Helper (fetching prices...)"));  
         } else {  
             tracker.add(header("Shaft Helper"));  
-            if (currentShaft().isPresent() && currentShaftLapisCorpses() >= 0 && currentShaft().get().gem().isGemstone()) {  
-                ShaftDetector.Shaft shaft = currentShaft().get();  
-                int lapisCorpses = currentShaftLapisCorpses();  
-                double profitWithCorpses = calculateCurrentShaftProfit(shaft.gem(), lapisCorpses, current);  
-                tracker.add(gemColored(shaft.gem(), "Current " + shaft.gem().name() + " shaft (" + lapisCorpses + " lapis)")  
-                    .append(gray(": " + Format.compact(profitWithCorpses) + "/hr")));  
-            }  
+        if (currentShaft().isPresent()
+            && currentShaftLapisCorpses() >= 0
+            && currentShaft().get().gem().isGemstone()) {
+
+            ShaftDetector.Shaft shaft = currentShaft().get();
+            int lapisCorpses = currentShaftLapisCorpses();
+
+            double profitWithCorpses =
+                calculateCurrentShaftProfit(
+                    shaft.gem(),
+                    lapisCorpses,
+                    current
+                );
+
+            MiningCalc.Strategy strategy =
+                MiningCalc.calculate(
+                    current,
+                    config.miningSpeed,
+                    config.miningFortune,
+                    config.gemstoneFortune,
+                    config.gemstoneSpread,
+                    config.pristine,
+                    config.coldRes,
+                    config.efficiency
+                );
+
+            boolean shouldMine =
+                strategy.shouldMine(shaft.gem(), lapisCorpses);
+
+            Component decision =
+                shouldMine
+                    ? Component.literal(" MINE").withStyle(ChatFormatting.GREEN)
+                    : Component.literal(" SKIP").withStyle(ChatFormatting.RED);
+
+            tracker.add(
+                gemColored(
+                    shaft.gem(),
+                    "Current " + shaft.gem().name()
+                    + " shaft (" + lapisCorpses + " lapis)"
+                )
+                .append(
+                    gray(": " + Format.compact(profitWithCorpses) + "/hr")
+                )
+                .append(decision)
+            );
+        }
             tracker.addAll(overviewLines(current));  
         }  
         trackerLines = tracker;  
@@ -373,38 +437,81 @@ public final class ShaftTracker {
         logLines = log;  
     }
 
-    /** What /shaft answers: one line per gemstone type + lapis corpse count
-     * Shows everysingle gemstone with 0 to 4 lapis corpses, each with its own $/h. 
-     * Then sorts it from most to least profitable, so you can see what to aim for.
-     **/
-    private static List<Component> overviewLines(Map<String, Double> current) {  
-        List<Mining.Ranked> ranked = Mining.rankByProfit(  
-            Mining.calculateBreakdown(config.miningSpeed, config.miningFortune,  
-                config.gemstoneFortune, config.gemstoneSpread), current, config.pristine);  
-    
-        List<Mining.Ranked> gemstoneRanked = ranked.stream()  
-            .filter(gem -> gem.gem().isGemstone())  
-            .toList();  
-    
-        // One entry per gemstone per lapis-corpse count (0..MAX), each at its own coins/hr.  
-        record CorpseEntry(Mining.Ranked ranked, int corpses, double coins) {}  
-        List<CorpseEntry> entries = new ArrayList<>();  
-        for (Mining.Ranked gem : gemstoneRanked) {  
-            for (int c = 0; c <= Pristine.MAX_LAPIS_CORPSES; c++) {  
-                double coins = Mining.coinsPerHour(gem.breakdown(), current, config.pristine + c);  
-                entries.add(new CorpseEntry(gem, c, coins));  
-            }  
-        }  
-    
-        return entries.stream()  
-            .sorted((a, b) -> Double.compare(b.coins(), a.coins()))  
-            .limit(12)
-            .map(e -> (Component) gemColored(e.ranked().gem(), e.ranked().name())  
-                .append(Component.literal(  
-                    String.format(": %dl, %s/hr", e.corpses(), Format.compact(e.coins())))  
-                    .withStyle(ChatFormatting.GREEN)))  
-            .toList();  
-    }  
+    private static List<Component> overviewLines(Map<String, Double> current) {
+
+        MiningCalc.Strategy strategy =
+            MiningCalc.calculate(
+                current,
+                config.miningSpeed,
+                config.miningFortune,
+                config.gemstoneFortune,
+                config.gemstoneSpread,
+                config.pristine,
+                config.coldRes,
+                config.efficiency
+            );
+
+        List<Component> lines = new ArrayList<>();
+
+        // Overall optimal long-run strategy.
+        lines.add(
+            Component.literal(
+                "Optimal: " +
+                Format.compact(strategy.coinsPerHour()) +
+                "/hr"
+            ).withStyle(ChatFormatting.GOLD)
+        );
+
+        // The effective threshold after efficiency.
+        lines.add(
+            Component.literal(
+                "Threshold: " +
+                Format.compact(strategy.threshold()) +
+                "/hr"
+            ).withStyle(ChatFormatting.GRAY)
+        );
+
+        // How often a spawned shaft is worth mining.
+        lines.add(
+            Component.literal(
+                String.format(
+                    Locale.ROOT,
+                    "Accept: %.1f%% of shafts",
+                    strategy.acceptedProbability() * 100
+                )
+            ).withStyle(ChatFormatting.GRAY)
+        );
+
+        // Accepted shaft groups.
+        for (MiningCalc.AcceptanceGroup group :
+                MiningCalc.acceptanceGroups(strategy)) {
+
+            String lapis;
+
+            if (group.minimumLapis() == group.maximumLapis()) {
+                lapis = group.minimumLapis() + "L";
+            } else {
+                lapis =
+                    group.minimumLapis()
+                    + "-"
+                    + group.maximumLapis()
+                    + "L";
+            }
+
+            lines.add(
+                gemColored(
+                    group.gem(),
+                    "MINE " + group.gem().name()
+                ).append(
+                    Component.literal(
+                        " " + lapis
+                    ).withStyle(ChatFormatting.GREEN)
+                )
+            );
+        }
+
+        return lines;
+    } 
 
     /** Maps a tracked drop/sack item display name to its Bazaar product id. */  
     private static String idFor(String name) {  
@@ -414,13 +521,14 @@ public final class ShaftTracker {
             .replaceAll("^_+|_+$", "");  
         return switch (key) {  
             case "GLACITE" -> "GLACITE";  
+            case "ENCHANTED_GLACITE" -> "ENCHANTED_GLACITE";  
             case "HARD_STONE", "HARDSTONE" -> "HARD_STONE";  
             case "REFINED_MINERAL"  -> "REFINED_MINERAL";  
             case "GLOSSY_GEMSTONE"  -> "GLOSSY_GEMSTONE";  
             case "MITHRIL", "MITHRIL_ORE" -> "MITHRIL_ORE";  
             case "TITANIUM", "TITANIUM_ORE" -> "TITANIUM_ORE";  
-            default -> key; // fall back to the normalized name as the id  
-        };  
+            default -> key;  
+        };
     }
 
     /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */  

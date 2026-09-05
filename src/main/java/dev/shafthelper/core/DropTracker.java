@@ -25,11 +25,12 @@ public final class DropTracker {
   
     /** Display name (lowercased) -> Bazaar product id, for price lookups. */  
     private static final Map<String, String> ITEM_IDS = Map.of(  
-        "glacite", "GLACITE_JEWEL",  
+        "glacite", "GLACITE",  
+        "enchanted glacite", "ENCHANTED_GLACITE",  
         "hard stone", "HARD_STONE",  
         "refined mineral", "REFINED_MINERAL",  
         "glossy gemstone", "GLOSSY_GEMSTONE"  
-    );  
+    );
   
     /** All bazaar ids the price fetch must include so values resolve. */  
     public static final java.util.List<String> PRODUCT_IDS =  
