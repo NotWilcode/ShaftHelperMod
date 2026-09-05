@@ -2,6 +2,7 @@ package dev.shafthelper.client;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -319,6 +320,12 @@ public final class ShaftTracker {
             return;  
         }  
         Map<String, Double> current = prices;  
+
+        List<Component> profit = new ArrayList<>();  
+        if (config.miningSpeed > 0 && current != null) {  
+            profit.addAll(trackerLine(current));  
+        } 
+        profitLines = profit;
   
         // --- Tracker box: header + overview ---  
         List<Component> tracker = new ArrayList<>();  
@@ -339,14 +346,6 @@ public final class ShaftTracker {
             tracker.addAll(overviewLines(current));  
         }  
         trackerLines = tracker;  
-  
-        // --- Profit box: total profit / tracker estimate ---  
-        List<Component> profit = new ArrayList<>();  
-        if (config.miningSpeed > 0 && current != null) {  
-            profit.addAll(trackerLine(current));  
-        }  
-        profit.addAll(dropTrackerLines(current));  
-        profitLines = profit;
   
         // --- Log box: this session's shafts ---  
         List<Component> log = new ArrayList<>();  
@@ -405,16 +404,6 @@ public final class ShaftTracker {
                     String.format(": %dl, %s/hr", e.corpses(), Format.compact(e.coins())))  
                     .withStyle(ChatFormatting.GREEN)))  
             .toList();  
-    }
-
-    private static List<Component> dropTrackerLines(Map<String, Double> current) {  
-        List<Component> lines = new ArrayList<>();  
-        if (DROPS.isEmpty()) return lines;  
-    
-        appendSection(lines, "Rare Drops:", DROPS.rareDrops(), current);  
-        appendSection(lines, "Mining Fiesta:", DROPS.fiesta(), current);  
-        appendSection(lines, "Sacks:", DROPS.sacks(), current);  
-        return lines;  
     }  
 
     /** Maps a tracked drop/sack item display name to its Bazaar product id. */  
@@ -433,19 +422,6 @@ public final class ShaftTracker {
             default -> key; // fall back to the normalized name as the id  
         };  
     }
-    
-    private static void appendSection(List<Component> lines, String title,  
-                                    Map<String, Long> items, Map<String, Double> prices) {  
-        if (items.isEmpty()) return;  
-        lines.add(header(title));  
-        for (Map.Entry<String, Long> e : items.entrySet()) {  
-            long count = e.getValue();  
-            double price = prices == null ? 0.0 : prices.getOrDefault(idFor(e.getKey()), 0.0);  
-            String text = "  " + e.getKey() + ": " + count  
-                + (price > 0 ? " (" + Format.compact(count * price) + ")" : "");  
-            lines.add(gray(text));  
-        }  
-    }
 
     /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */  
     private static List<Component> trackerLine(Map<String, Double> current) {  
@@ -459,25 +435,26 @@ public final class ShaftTracker {
                         .withStyle(ChatFormatting.GOLD)));  
             });  
   
-        // Exact profit from sack data (not pristine-math estimation).  
-        double sackProfit = sackProfit(current);  
-        if (sackProfit > 0) {  
-            lines.add(Component.literal("Total Profit: " + Format.compact(sackProfit))  
+        // Combine every coin source: pristine procs (flawed + extrapolated rough) and real sack pickups.  
+        Map<String, Double> breakdown = new LinkedHashMap<>(PROCS.profitBreakdown(current, config.pristine));  
+        if (current != null) {  
+            for (Map.Entry<String, Long> entry : DROPS.sacks().entrySet()) {  
+                double value = entry.getValue() * current.getOrDefault(idFor(entry.getKey()), 0.0);  
+                if (value > 0) breakdown.merge(entry.getKey(), value, Double::sum);  
+            }  
+        }  
+  
+        double total = breakdown.values().stream().mapToDouble(Double::doubleValue).sum();  
+        if (total > 0) {  
+            lines.add(Component.literal("Total Profit: " + Format.compact(total))  
                 .withStyle(ChatFormatting.GREEN));  
+            breakdown.entrySet().stream()  
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))  
+                .limit(5)  
+                .forEach(e -> lines.add(gray("  " + e.getKey() + ": " + Format.compact(e.getValue()))));  
         }  
   
         return lines;  
-    }  
-  
-    /** Sums the real coin value of everything counted in the sack breakdown. */  
-    private static double sackProfit(Map<String, Double> current) {  
-        if (current == null) return 0;  
-        double total = 0;  
-        for (Map.Entry<String, Long> entry : DROPS.sacks().entrySet()) {  
-            String id = idFor(entry.getKey());  
-            total += entry.getValue() * current.getOrDefault(id, 0.0);  
-        }  
-        return total;  
     }
 
     private static String minutes(long elapsedMs) {

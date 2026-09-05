@@ -35,9 +35,6 @@ public final class DropTracker {
     public static final java.util.List<String> PRODUCT_IDS =  
         java.util.List.copyOf(new java.util.HashSet<>(ITEM_IDS.values()));  
   
-    /** name -> total count gained this session. Insertion order preserved for the HUD. */  
-    private final Map<String, Long> counts = new LinkedHashMap<>();  
-  
     /**  
      * Records the parsed hover text of a [Sacks] message.  
      * @param hoverText the full tooltip text (may contain multiple lines separated by \n)  
@@ -49,7 +46,6 @@ public final class DropTracker {
         for (String raw : hoverText.split("\n")) {  
             String line = raw.replaceAll("\u00a7.", "").trim();  
             if (line.isEmpty()) continue;  
-            // Skip non-item lines like headers/footers.  
             if (line.toLowerCase(Locale.ROOT).contains("sack") && !line.contains("+")) continue;  
             Matcher m = SACK_LINE.matcher(line);  
             if (!m.matches()) continue;  
@@ -65,19 +61,18 @@ public final class DropTracker {
                 continue;  
             }  
             if (amount <= 0) continue;  
-            counts.merge(name, amount, Long::sum);  
+            sacks.merge(name, amount, Long::sum);   // was: counts.merge(...)
             any = true;  
         }  
         return any;  
     }  
   
-    /** Bazaar id for a tracked display name, or null if we don't price it. */  
     public static String idFor(String displayName) {  
         return ITEM_IDS.get(displayName.toLowerCase(Locale.ROOT));  
     }  
   
     public synchronized Map<String, Long> snapshot() {  
-        return new LinkedHashMap<>(counts);  
+        return new LinkedHashMap<>(sacks);   // <-- was counts  
     }  
   
     public synchronized boolean isEmpty() {  
@@ -85,8 +80,8 @@ public final class DropTracker {
     }  
   
     public synchronized void resetSession() {  
-        counts.clear();  
+        rareDrops.clear();  
         fiesta.clear();  
         sacks.clear();  
-    }  
+    }
 }

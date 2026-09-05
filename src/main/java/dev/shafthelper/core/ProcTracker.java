@@ -46,9 +46,20 @@ public final class ProcTracker {
         Gemstone gem = BY_NAME.get(matcher.group(1).trim().toLowerCase(Locale.ROOT));  
         if (gem == null) return false;  
         long count = Long.parseLong(matcher.group(2).replace(",", ""));  
-        if (procs == 0) startedAt = now;  
-        flawed.merge(gem, count, Long::sum);  
-        procs += 1;  
+            if (procs == 0) startedAt = now;  
+            flawed.merge(gem, count, Long::sum);  
+            procs += 1;  
+    
+            // Accumulate realized profit (flawed value + pristine-extrapolated rough value).  
+            if (prices != null) {  
+                double flawedValue = count * prices.getOrDefault(gem.flawedId(), 0.0);  
+                double roughValue = 0;  
+                double chance = Mining.pristineChance(pristine);  
+                if (chance > 0) {  
+                    roughValue = count * ((1 - chance) / chance) * prices.getOrDefault(gem.roughId(), 0.0);  
+                }  
+                totalProfit += (flawedValue + roughValue);  
+            }  
         return true;  
     }
 
@@ -83,6 +94,28 @@ public final class ProcTracker {
 
     public synchronized double totalProfit() {
         return totalProfit;
+    }
+
+    /** Per-item coin value earned this session: flawed drops + pristine-extrapolated rough gems. */  
+    public synchronized Map<String, Double> profitBreakdown(Map<String, Double> prices, double pristine) {  
+        Map<String, Double> breakdown = new LinkedHashMap<>();  
+        if (prices == null) return breakdown;  
+        double chance = Mining.pristineChance(pristine);  
+        for (Map.Entry<Gemstone, Long> entry : flawed.entrySet()) {  
+            Gemstone gem = entry.getKey();  
+            long count = entry.getValue();  
+            double flawedValue = count * prices.getOrDefault(gem.flawedId(), 0.0);  
+            if (flawedValue > 0) {  
+                breakdown.merge("Flawed " + gem.name() + " Gemstone", flawedValue, Double::sum);  
+            }  
+            if (chance > 0) {  
+                double roughValue = count * ((1 - chance) / chance) * prices.getOrDefault(gem.roughId(), 0.0);  
+                if (roughValue > 0) {  
+                    breakdown.merge("Rough " + gem.name() + " Gemstone", roughValue, Double::sum);  
+                }  
+            }  
+        }  
+        return breakdown;  
     }
 
     public record Estimate(int procs, long elapsedMs, double flawedValue, double coinsPerHour) {}
