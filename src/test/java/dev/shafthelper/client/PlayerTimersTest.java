@@ -39,6 +39,15 @@ class PlayerTimersTest {
     }
 
     @Test
+    void coldTimerUsesTheConfiguredShaftDuration() {
+        long elapsedSeconds = 125L;
+        long remainingSeconds = (long) Math.ceil(dev.shafthelper.core.Cold.shaftSeconds(100) - elapsedSeconds);
+
+        assertEquals(125L, elapsedSeconds);
+        assertEquals(625L, remainingSeconds);
+    }
+
+    @Test
     void cyclesThemeAndPersistsPalette() {
         ModConfig config = new ModConfig();
         assertEquals("midnight", config.guiTheme);

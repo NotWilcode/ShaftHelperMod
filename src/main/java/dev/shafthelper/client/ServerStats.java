@@ -22,6 +22,12 @@ public class ServerStats {
     public static double getMsPerTick() {  
         return msPerTick;  
     }
+
+    /** Wall-clock duration of one server tick at the currently observed TPS. */
+    public static double getWallClockMsPerTick() {
+        double tps = getTps();
+        return tps > 0.0 ? 1000.0 / tps : DEFAULT_MS_PER_TICK;
+    }
   
     private static long lastServerGameTime = -1L;  
     private static long lastServerTimeWallClock = -1L;  

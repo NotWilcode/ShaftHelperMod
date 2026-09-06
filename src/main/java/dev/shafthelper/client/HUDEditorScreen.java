@@ -157,14 +157,14 @@ public class HUDEditorScreen extends Screen {
         huds.add(new Hud() {
             public int width() {
                 Font font = HUDEditorScreen.this.font;
-                String[] labels = { "Cold Resistance: 1m 30s", "Fillet O' Fortune: 10m 0s", "Pristine Potato: 5m 0s", "Deployable: 5m 0s" };
+                String[] labels = { "Cold Resistance: 1m 30s", "Fillet O' Fortune: 10m 0s", "Pristine Potato: 5m 0s", "Deployable: 5m 0s", "Shaft time: 1m 30s", "Cold kick: 8m 30s", "Mining Fiesta: 2h 15m" };
                 int w = 0;
                 for (String text : labels) {
                     w = Math.max(w, font.width(Component.literal(text)));
                 }
                 return w + 12;
             }
-            public int height() { return 50; }
+            public int height() { return 80; }
             public double scale() { return config.playerTimersScale; } public void scale(double s) { config.playerTimersScale = s; }
             public double percentX() { return config.playerTimersX; }
             public void percentX(double p) { config.playerTimersX = p; }

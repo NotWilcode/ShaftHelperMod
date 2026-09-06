@@ -98,6 +98,7 @@ public final class MiningCalculator implements HudElement {
             ticksElapsed = 0;  
             startServerTick = player.tickCount;  
             timeoutExceeded = false;  
+            wasTimeoutExceeded = false;
             currentBlock = blockPos;  
             return;  
         }  
@@ -110,6 +111,7 @@ public final class MiningCalculator implements HudElement {
             estimatedTicksAtStart = ticksNeeded; // may be 0 on first tick; refresh below
             ticksElapsed = 0;  
             timeoutExceeded = false;  
+            wasTimeoutExceeded = false;
             EfficiencyDisplay.onBlockExpected();  
         }  
     
@@ -119,7 +121,7 @@ public final class MiningCalculator implements HudElement {
         professionalLevel = Math.min(professionalLevel, 141); 
         if (config.goblinOmelette) professionalLevel += 1;   
         double addedGemstoneSpeed = 50 + (professionalLevel * 5); 
-        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed; 
+        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed + ShaftTracker.miningSpeedBonus();
         ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
             estimatedTicksAtStart = ticksNeeded; // store the fresh estimate for calibration
     
@@ -153,6 +155,7 @@ public final class MiningCalculator implements HudElement {
         ticksElapsed = 0;
         startServerTick = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.tickCount : 0;
         timeoutExceeded = false;
+        wasTimeoutExceeded = false;
     }
 
     public static BlockPos getCurrentBlock()  { return currentBlock; }
@@ -163,18 +166,23 @@ public final class MiningCalculator implements HudElement {
     private static double computePingOffset(double ticksNeeded) {  
         if (ticksNeeded <= 0) return ticksNeeded;  
         // Server-side break time scales with how long each tick actually takes.  
-        double tpsFactor = ServerStats.getMsPerTick() / 50.0;  
+        double tpsFactor = ServerStats.getWallClockMsPerTick() / 50.0;
         double effectiveTicks = ticksNeeded * tpsFactor;  
         double ping = ServerStats.getPing();  
         if (ping <= 0) return effectiveTicks;  
         double pingTicks = ping / 50.0; // network latency is TPS-independent (client ticks)  
-        return effectiveTicks - pingTicks;  
+        return Math.min(ticksNeeded, Math.max(0.0, effectiveTicks - pingTicks));
     }
 
     /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  
     public static double computeEffectiveTicks(double ticks) {  
         double pingTicks = ServerStats.getPing() / ServerStats.getMsPerTick();  
         return ticks + pingTicks;  
+    }
+
+    public static double computeIdealBreakMs(double ticks) {
+        if (ticks <= 0.0) return 0.0;
+        return ticks * ServerStats.getWallClockMsPerTick() + Math.max(0L, ServerStats.getPing());
     }
     
     /**  
@@ -236,7 +244,7 @@ public final class MiningCalculator implements HudElement {
             }
             professionalLevel = Math.min(professionalLevel, 141);
             double addedGemstoneSpeed = 50 + (professionalLevel * 5);
-            double actualMiningSpeed = MiningSpeed + addedGemstoneSpeed;
+            double actualMiningSpeed = MiningSpeed + addedGemstoneSpeed + ShaftTracker.miningSpeedBonus();
             
             // Calculate ticks needed using PingOffsetMiner formula
             ticksNeeded = Math.round(blockHardness * 30 / (actualMiningSpeed));

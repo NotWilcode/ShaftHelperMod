@@ -40,6 +40,10 @@ public final class ModConfig {
     public int gemstoneFortune = 0;
     public int gemstoneSpread = 0;
     public int proffesionalLevel = 0;
+    public boolean eagerAdventurer = false;
+    public boolean mineshaftMayhem = false;
+    public boolean steadyHand = false;
+    public boolean ragsToRiches = false;
     
     public double pristine = 0;
     public double efficiency = Cold.DEFAULT_EFFICIENCY;
@@ -60,6 +64,9 @@ public final class ModConfig {
     public boolean enableNetwork = true;
     public boolean miningBuffTimerEnabled = true;
     public boolean miningDeployableTimerEnabled = true;
+    public boolean coldTimerEnabled = true;
+    public boolean efficiencyEnabled = true;
+    public boolean pickaxeAbilityEnabled = true;
     public boolean presetsAutoImported = false;
     public boolean orderedWaypointsEnabled = true;
     public boolean corpseWaypointsEnabled = true;

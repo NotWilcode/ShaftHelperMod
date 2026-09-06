@@ -6,10 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import dev.shafthelper.config.ModConfig;
+import dev.shafthelper.core.Cold;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
@@ -292,6 +294,25 @@ public final class PlayerTimers implements HudElement {
             if (remaining > 0L) {
                 lines.add("Deployable: " + formatDuration(remaining));
             }
+        }
+
+        if (config.coldTimerEnabled) {
+            Optional<dev.shafthelper.core.ShaftLog.Entry> entry = ShaftTracker.currentShaftEntry();
+            if (entry.isPresent()) {
+                long elapsedSeconds = Math.max(0L, (System.currentTimeMillis() - entry.get().enteredAt()) / 1000L);
+                long remainingSeconds = Math.max(0L, (long) Math.ceil(Cold.shaftSeconds(Math.max(0.0, config.coldRes)) - elapsedSeconds));
+                lines.add("Shaft time: " + formatDuration(elapsedSeconds * 1000L));
+                lines.add("Cold kick: " + formatDuration(remainingSeconds * 1000L));
+            }
+        }
+
+        dev.shafthelper.core.MiningFiesta.State fiesta = ShaftTracker.miningFiesta();
+        if (fiesta.active()) {
+            lines.add("Mining Fiesta: " + formatDuration(fiesta.remainingMs()));
+        } else if (fiesta.hasEvent()) {
+            lines.add("Next " + fiesta.label() + ": " + formatDuration(fiesta.remainingMs()));
+        } else if (fiesta.coleMayor()) {
+            lines.add("Cole mayor: check Events tab");
         }
 
         if (lines.isEmpty()) return;

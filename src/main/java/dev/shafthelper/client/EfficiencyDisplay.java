@@ -40,9 +40,7 @@ public final class EfficiencyDisplay implements HudElement {
         }  
         lastMineTime = currentTime;  
         blocksMined++;  
-        // Ideal time this block should have taken (ticks * ms-per-tick), incl. ping.  
-        double effTicks = MiningCalculator.computeEffectiveTicks(MiningCalculator.getEstimatedTicks());  
-        idealElapsedMs += effTicks * ServerStats.getMsPerTick();  
+        idealElapsedMs += MiningCalculator.computeIdealBreakMs(MiningCalculator.getEstimatedTicks());
     }
     
     public static void onBlockExpected() {  
@@ -84,6 +82,7 @@ public final class EfficiencyDisplay implements HudElement {
         Font font = client.font;
         
         ModConfig config = ShaftTracker.config();
+        if (!config.efficiencyEnabled) return;
         int boxW = Math.max(1, (int) Math.round(150 * config.effScale));
         int boxH = Math.max(1, (int) Math.round(50 * config.effScale));
         

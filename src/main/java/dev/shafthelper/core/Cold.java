@@ -9,10 +9,11 @@ public final class Cold {
     public static final double MAX_COLD_RESISTANCE = 138.5;
     /** Mining is never non-stop: walking to the next vein, corpses. */
     public static final double DEFAULT_EFFICIENCY = 70;
+    public static final double FASTER_SHAFT_COLD = 0.75;
 
     public static double secondsPerCold(double coldResistance) {
         if (coldResistance < 0) throw new IllegalArgumentException("coldResistance cannot be negative");
-        return SECONDS_PER_COLD * (1 + coldResistance / 100);
+        return SECONDS_PER_COLD * FASTER_SHAFT_COLD * (1 + coldResistance / 100);
     }
 
     /** How long you last in a shaft before 100 Cold kicks you out. */

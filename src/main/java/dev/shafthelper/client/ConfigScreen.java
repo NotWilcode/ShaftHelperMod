@@ -173,9 +173,9 @@ private final ModConfig config = ShaftTracker.config();
   
     private int contentHeightFor(Tab t) {  
         int rows = switch (t) {  
-            case STATS -> 9;  
-            case HUD -> 6;  
-            case OPTIONS -> 4;  
+            case STATS -> 10;  
+            case HUD -> 13;
+            case OPTIONS -> 3;  
             case WAYPOINTS -> 6;  
         };  
         return HEADER_HEIGHT + rows * ROW_HEIGHT;  
@@ -183,6 +183,15 @@ private final ModConfig config = ShaftTracker.config();
   
     private int buildStats(int y) {  
         y = section("Stats", y);  
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.autoStats, v -> {
+                config.autoStats = v;
+                rebuildWidgets();
+            })));
+        addLabel("Auto-read stats", y);
+        y += ROW_HEIGHT;
+
         y = labeledInt(statLabels[0], y, config.miningSpeed, v -> config.miningSpeed = v);  
         y = labeledInt(statLabels[1], y, config.miningFortune, v -> config.miningFortune = v);  
         y = labeledInt(statLabels[2], y, config.gemstoneFortune, v -> config.gemstoneFortune = v);  
@@ -191,6 +200,7 @@ private final ModConfig config = ShaftTracker.config();
         y = labeledDouble(statLabels[5], y, config.pristine, 0, 100, v -> config.pristine = v);  
         y = labeledDouble(statLabels[6], y, config.coldRes, 0, Cold.MAX_COLD_RESISTANCE, v -> config.coldRes = v);  
         y = labeledDouble(statLabels[7], y, config.efficiency, 1, 100, v -> config.efficiency = v);  
+        for (EditBox field : numberFields) field.active = !config.autoStats;
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT, 
             config.goblinOmelette, v -> config.goblinOmelette = v)));  
@@ -248,6 +258,30 @@ private final ModConfig config = ShaftTracker.config();
         addLabel("Mining Deployable timer", y);
         y += ROW_HEIGHT;
 
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.coldTimerEnabled, v -> config.coldTimerEnabled = v)));
+        addLabel("Cold timer", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.efficiencyEnabled, v -> config.efficiencyEnabled = v)));
+        addLabel("Efficiency overlay", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.pingSoundAlert, v -> config.pingSoundAlert = v)));
+        addLabel("Ping alert", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.pickaxeAbilityEnabled, v -> config.pickaxeAbilityEnabled = v)));
+        addLabel("Pickaxe popup", y);
+        y += ROW_HEIGHT;
+
         StyledButton themeButton = new StyledButton(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
             Component.literal(capitalize(config.guiTheme)), b -> {
@@ -277,23 +311,10 @@ private final ModConfig config = ShaftTracker.config();
             
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
-            config.autoStats, v -> config.autoStats = v)));  
-        addLabel("Auto-read stats", y);  
-        y += ROW_HEIGHT;  
-    
-        tabContent.add(addRenderableWidget(new StyledToggle(
-            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
             config.enableDustParticles, v -> config.enableDustParticles = v)));  
         addLabel("Power Coating / Glacial", y);  
         y += ROW_HEIGHT;  
     
-        // Only if you add pingSoundAlert to ModConfig:  
-        tabContent.add(addRenderableWidget(new StyledToggle(
-            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
-            config.pingSoundAlert, v -> config.pingSoundAlert = v)));  
-        addLabel("Ping Sound Alert", y);  
-        y += ROW_HEIGHT;  
-
         return y;  
     }
   

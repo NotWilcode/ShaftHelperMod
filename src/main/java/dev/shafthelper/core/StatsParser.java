@@ -23,6 +23,7 @@ public final class StatsParser {
     private static final Pattern UMBER_ENTRY = Pattern.compile("(?i)Umber:\\s*(NOT LOOTED|LOOTED)");
     private static final Pattern TUNGSTEN_ENTRY = Pattern.compile("(?i)Tungsten:\\s*(NOT LOOTED|LOOTED)");
     private static final Pattern COLD = Pattern.compile("(?i)Cold:\\s*-?([\\d,]+(?:\\.\\d+)?)");
+    private static final Pattern COLD_RESISTANCE = stat("Cold Resistance");
 
     /** Hypixel puts the stat icon between the colon and the number: "Mining Speed: ⸕3445". */
     private static Pattern stat(String name) {
@@ -63,6 +64,7 @@ public final class StatsParser {
             if (gemstoneSpread == null) gemstoneSpread = match(GEMSTONE_SPREAD, line);
             if (pristine == null) pristine = match(PRISTINE, line);
             if (cold == null) cold = match(COLD, line);
+            if (cold == null) cold = match(COLD_RESISTANCE, line);
             if (LAPIS_ENTRY.matcher(line).find()) lapisCount++;
             if (UMBER_ENTRY.matcher(line).find()) umberCount++;
             if (TUNGSTEN_ENTRY.matcher(line).find()) tungstenCount++;

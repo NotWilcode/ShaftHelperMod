@@ -86,6 +86,12 @@ class StatsParserTest {
     }
 
     @Test
+    void readsColdResistanceInputForAutomaticConfigUpdates() {
+        StatsParser.Stats stats = StatsParser.parse(List.of("Cold Resistance: 138.5"));
+        assertEquals(138.5, stats.cold());
+    }
+
+    @Test
     void ignoresLinesWithoutNumbers() {
         StatsParser.Stats stats = StatsParser.parse(List.of(
             "Mining Speed: N/A", "Area: Mineshaft", "some_player"));

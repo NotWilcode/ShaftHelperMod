@@ -39,6 +39,8 @@ public final class PickaxeAbilityAlert implements HudElement {
     }
 
     private static void onChatMessage(Component message, boolean overlay) {
+        ModConfig config = ShaftTracker.config();
+        if (config == null || !config.pickaxeAbilityEnabled) return;
         if (overlay || message == null) return;
         String text = stripFormatting(message.getString());
         if (!matchesReadyText(text)) return;
@@ -61,6 +63,8 @@ public final class PickaxeAbilityAlert implements HudElement {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+        ModConfig config = ShaftTracker.config();
+        if (config == null || !config.pickaxeAbilityEnabled) return;
         if (!isVisible()) return;
 
         Minecraft client = Minecraft.getInstance();
@@ -72,9 +76,6 @@ public final class PickaxeAbilityAlert implements HudElement {
         int height = 50;
         int x = (graphics.guiWidth() - width) / 2;
         int y = Math.max(40, graphics.guiHeight() / 5);
-
-        ModConfig config = ShaftTracker.config();
-        if (config == null) return;
 
         long now = System.currentTimeMillis();
         double pulse = (Math.sin(now / 180.0) + 1.0) / 2.0;

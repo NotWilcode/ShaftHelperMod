@@ -17,6 +17,7 @@ import com.google.gson.reflect.TypeToken;
 
 import dev.shafthelper.client.CorpseFinder;
 import dev.shafthelper.client.EfficiencyDisplay;
+import dev.shafthelper.client.HotmTracker;
 import dev.shafthelper.client.MiningCalculator;
 import dev.shafthelper.client.NetworkTracker;
 import dev.shafthelper.client.PickaxeAbilityAlert;
@@ -64,6 +65,7 @@ public class ShaftHelperClient implements ClientModInitializer {
         MiningCalculator.register();
         TickDisplay.register();
         EfficiencyDisplay.register();
+        HotmTracker.register();
         PlayerTimers.register();
         PickaxeAbilityAlert.register();
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("shafthelper", "network_tracker"), new NetworkTracker());
