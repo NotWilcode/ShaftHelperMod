@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import dev.shafthelper.core.ShaftSpawnTracker;
 
 /**
  * Mineshaft profit / acceptance calculator.
@@ -299,6 +300,13 @@ public final class MiningCalc {
      * Since the shaft duration is identical for all states, the
      * optimal strategy is guaranteed to be a threshold strategy.
      */
+    double spawnCoinsPerHour = YOUR_EXISTING_PROFIT_CALC_MHR;
+
+    double spawnMinutes =
+        ShaftSpawnTracker.hasSpawnTime()
+            ? ShaftSpawnTracker.getAverageSpawnMinutes()
+            : MiningCalc.SHAFT_SPAWN_MINUTES;
+
     public static Strategy calculate(
         Map<String, Double> prices,
         int miningSpeed,
@@ -307,7 +315,9 @@ public final class MiningCalc {
         int gemstoneSpread,
         double pristine,
         double coldResistance,
-        double efficiency
+        double efficiency,
+        double spawnCoinsPerHour,
+        double spawnMinutes
     ) 
     {
         List<ShaftState> states =
@@ -339,14 +349,19 @@ public final class MiningCalc {
                 )
                 .toList();
 
+        // Fall back to the old constant if the measurement isn't valid.
+        if (spawnMinutes <= 0) { spawnMinutes = SHAFT_SPAWN_MINUTES; }
+        if (spawnCoinsPerHour < 0) { spawnCoinsPerHour = 0; }
+
         double bestCoinsPerHour = 0;
         double bestCoinsPerCycle = 0;
-        double bestMinutesPerCycle = SHAFT_SPAWN_MINUTES;
+        double bestMinutesPerCycle = spawnMinutes;
         double bestAcceptedProbability = 0;
         int bestCount = 0;
 
         double acceptedProbability = 0;
-        double expectedCoinsPerCycle = 0;
+        // Money made while spawning the next shaft.
+        double expectedCoinsPerCycle = spawnCoinsPerHour * spawnMinutes / 60.0;
         double expectedMiningMinutes = 0;
 
         /*
@@ -370,11 +385,8 @@ public final class MiningCalc {
             acceptedProbability += state.probability();
             expectedCoinsPerCycle += state.probability() * coinsPerMinute * state.miningMinutes();
             expectedMiningMinutes += state.probability() * state.miningMinutes();
-
-            double totalMinutes = SHAFT_SPAWN_MINUTES + expectedMiningMinutes;
-            double totalCoinsPerHour = totalMinutes <= 0
-                ? 0
-                : expectedCoinsPerCycle / totalMinutes * 60.0;
+            double totalMinutes = spawnMinutes + expectedMiningMinutes;
+            double totalCoinsPerHour = expectedCoinsPerCycle / totalMinutes * 60.0;
 
             if (totalCoinsPerHour > bestCoinsPerHour + EPSILON) {
                 bestCoinsPerHour =totalCoinsPerHour;
@@ -403,6 +415,8 @@ public final class MiningCalc {
             bestCoinsPerCycle,
             bestMinutesPerCycle,
             bestAcceptedProbability,
+            spawnCoinsPerHour,
+            spawnMinutes,
             List.copyOf(accepted),
             List.copyOf(states)
         );
@@ -510,6 +524,29 @@ public final class MiningCalc {
         }
 
         return result;
+    }
+
+    public double getAverageSpawnMinutes() {
+        if (samples.isEmpty()) {
+            return -1;
+        }
+
+        double[] values = new double[samples.size()];
+
+        int i = 0;
+        for (double sample : samples) {
+            values[i++] = sample;
+        }
+
+        java.util.Arrays.sort(values);
+
+        int middle = values.length / 2;
+
+        if (values.length % 2 == 0) {
+            return (values[middle - 1] + values[middle]) / 2.0;
+        }
+
+        return values[middle];
     }
 
     private MiningCalc() {}

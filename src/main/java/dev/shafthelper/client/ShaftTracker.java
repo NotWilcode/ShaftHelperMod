@@ -25,6 +25,7 @@ import dev.shafthelper.core.Pristine;
 import dev.shafthelper.core.ProcTracker;
 import dev.shafthelper.core.ShaftDetector;
 import dev.shafthelper.core.ShaftLog;
+import dev.shafthelper.core.ShaftSpawnTracker;
 import dev.shafthelper.core.StatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -220,6 +221,7 @@ public final class ShaftTracker {
             missingShaftScans = 0;
             double initialProfit = PROCS.totalProfit();
             LOG.enter(shaft.get(), currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses, System.currentTimeMillis(), initialProfit);
+            double measuredSpawnMinutes = shaftSpawnTracker.onShaftEnter();
             detectedShaft = shaft;
         } else if (shaft.isPresent() && detectedShaft.isPresent() && !shaft.get().code().equals(detectedShaft.get().code())) {
             // Switching shafts
@@ -234,6 +236,7 @@ public final class ShaftTracker {
             if (++missingShaftScans >= 2) {
                 double finalProfit = PROCS.totalProfit();
                 LOG.leave(finalProfit);
+                shaftSpawnTracker.onShaftExit();
                 detectedShaft = Optional.empty();
                 missingShaftScans = 0;
             }
@@ -552,26 +555,29 @@ public final class ShaftTracker {
 
         List<Component> lines = new ArrayList<>();
 
-        lines.add(Component.literal(
-            "Optimal: " +
-            Format.compact(strategy.coinsPerHour()) +
-            "/hr"
-        ).withStyle(ChatFormatting.GOLD)
-        );
+        String spawnRateText =
+            String.format(
+                "Spawn: %.1fM/hr",
+                strategy.spawnCoinsPerHour() / 1_000_000.0
+            );
 
-        lines.add(Component.literal(
-            "MINE≥ " +
-            Format.compact(strategy.threshold()) +
-            "/hr"
-        ).withStyle(ChatFormatting.GRAY)
-        );
+        String spawnTimeText =
+            String.format(
+                "Spawn Time: %.2f min",
+                strategy.spawnMinutes()
+            );
 
-        lines.add(Component.literal(String.format(
-            Locale.ROOT,
-            "Accept: %.1f%% of shafts",
-            strategy.acceptedProbability() * 100
-        )).withStyle(ChatFormatting.GRAY)
-        );
+        String optimalText =
+            String.format(
+                "Optimal: %.1fM/hr",
+                strategy.coinsPerHour() / 1_000_000.0
+            );
+
+        String thresholdText =
+            String.format(
+                "Threshold: %.1fM/hr",
+                strategy.threshold() / 1_000_000.0
+            );
 
          // Find the lowest accepted lapis count for each gemstone.
         java.util.Map<Gemstone, Integer> lowestAccepted = new java.util.LinkedHashMap<>();
@@ -679,6 +685,8 @@ public final class ShaftTracker {
   
         return lines;  
     }
+
+    private final ShaftSpawnTracker shaftSpawnTracker = new ShaftSpawnTracker();
 
     private static String minutes(long elapsedMs) {
         long minutes = elapsedMs / 60_000;
