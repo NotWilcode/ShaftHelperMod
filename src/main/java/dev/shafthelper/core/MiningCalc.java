@@ -34,10 +34,7 @@ public final class MiningCalc {
        Mineshaft mechanics
        ========================= */
 
-    /** Average time spent generating/entering another shaft. */
     public static final double SHAFT_SPAWN_MINUTES = 1.5;
-
-    /** Chance for the normal third corpse. */
     public static final double THIRD_CORPSE_CHANCE = 0.50;
 
     /**
@@ -48,16 +45,9 @@ public final class MiningCalc {
      * changed over time.
      */
     public static final double EXTRA_CORPSE_CHANCE = 0.45;
-
-    /** Chance that an individual corpse is Lapis. */
     public static final double LAPIS_CORPSE_CHANCE = 0.50;
-
-    /** Number of possible Lapis corpses. */
     public static final int MAX_LAPIS = 4;
-
-    /** Number of shaft types currently represented by Gemstones.ALL. */
     public static final int SHAFT_TYPES = 17;
-
     private static final double EPSILON = 1e-9;
 
     /* =========================
@@ -79,7 +69,6 @@ public final class MiningCalc {
         if (lapis < 0 || lapis > MAX_LAPIS) {
             return 0;
         }
-
         double probability = 0;
 
         // 2 corpses
@@ -94,15 +83,13 @@ public final class MiningCalc {
                 THIRD_CORPSE_CHANCE * (1 - EXTRA_CORPSE_CHANCE)
                 +
                 (1 - THIRD_CORPSE_CHANCE) * EXTRA_CORPSE_CHANCE
-            ) *
-            binomialProbability(3, lapis);
+            ) * binomialProbability(3, lapis);
 
         // 4 corpses
         probability +=
             THIRD_CORPSE_CHANCE *
             EXTRA_CORPSE_CHANCE *
             binomialProbability(4, lapis);
-
         return probability;
     }
 
@@ -122,13 +109,11 @@ public final class MiningCalc {
         }
 
         k = Math.min(k, n - k);
-
         int result = 1;
 
         for (int i = 1; i <= k; i++) {
             result = result * (n - k + i) / i;
         }
-
         return result;
     }
 
@@ -244,16 +229,13 @@ public final class MiningCalc {
             );
         }
 
-        double typeProbability =
-            1.0 / Gemstones.ALL.size();
-
+        double typeProbability = 1.0 / Gemstones.ALL.size();
         double miningMinutes =
             Cold.shaftSeconds(coldResistance) / 60.0;
 
         List<ShaftState> states = new ArrayList<>();
 
         for (Gemstone gem : Gemstones.ALL) {
-
             /*
              * Non-gemstone shaft types are currently treated as
              * zero profit because Mining.java only models gemstone
@@ -326,7 +308,8 @@ public final class MiningCalc {
         double pristine,
         double coldResistance,
         double efficiency
-    ) {
+    ) 
+    {
         List<ShaftState> states =
             buildStates(
                 prices,
@@ -374,67 +357,30 @@ public final class MiningCalc {
          *
          * Prefix 2:
          *   accept the two best states.
-         *
-         * ...
-         *
-         * The best prefix is the optimal strategy.
          */
         for (int i = 0; i < sorted.size(); i++) {
-
             ShaftState state = sorted.get(i);
-
-            /*
-             * States with zero probability don't matter.
-             */
             if (state.probability() <= 0) {
                 continue;
             }
-
             double effectiveRate =
                 state.effectiveCoinsPerHour(efficiency);
 
-            /*
-             * M per minute while actually mining.
-             */
-            double coinsPerMinute =
-                effectiveRate / 60.0;
-
+            double coinsPerMinute = effectiveRate / 60.0;
             acceptedProbability += state.probability();
+            expectedCoinsPerCycle += state.probability() * coinsPerMinute * state.miningMinutes();
+            expectedMiningMinutes += state.probability() * state.miningMinutes();
 
-            expectedCoinsPerCycle +=
-                state.probability()
-                * coinsPerMinute
-                * state.miningMinutes();
-
-            expectedMiningMinutes +=
-                state.probability()
-                * state.miningMinutes();
-
-            double totalMinutes =
-                SHAFT_SPAWN_MINUTES
-                + expectedMiningMinutes;
-
-            double totalCoinsPerHour =
-                totalMinutes <= 0
-                    ? 0
-                    : expectedCoinsPerCycle
-                        / totalMinutes
-                        * 60.0;
+            double totalMinutes = SHAFT_SPAWN_MINUTES + expectedMiningMinutes;
+            double totalCoinsPerHour = totalMinutes <= 0
+                ? 0
+                : expectedCoinsPerCycle / totalMinutes * 60.0;
 
             if (totalCoinsPerHour > bestCoinsPerHour + EPSILON) {
-
-                bestCoinsPerHour =
-                    totalCoinsPerHour;
-
-                bestCoinsPerCycle =
-                    expectedCoinsPerCycle;
-
-                bestMinutesPerCycle =
-                    totalMinutes;
-
-                bestAcceptedProbability =
-                    acceptedProbability;
-
+                bestCoinsPerHour =totalCoinsPerHour;
+                bestCoinsPerCycle = expectedCoinsPerCycle;
+                bestMinutesPerCycle = totalMinutes;
+                bestAcceptedProbability = acceptedProbability;
                 bestCount = i + 1;
             }
         }
@@ -451,7 +397,7 @@ public final class MiningCalc {
                 : accepted.get(accepted.size() - 1)
                     .effectiveCoinsPerHour(efficiency);
 
-        return new Strategy(
+        Strategy result = new Strategy(
             bestCoinsPerHour,
             threshold,
             bestCoinsPerCycle,
@@ -460,15 +406,15 @@ public final class MiningCalc {
             List.copyOf(accepted),
             List.copyOf(states)
         );
+
+        return result;
     }
 
     /* =========================
        Convenience helpers
        ========================= */
 
-    /**
-     * Returns the theoretical raw coins/hour for one exact shaft.
-     */
+    /* Returns the theoretical raw coins/hour for one exact shaft.*/
     public static double rateFor(
         Gemstone gem,
         int lapis,

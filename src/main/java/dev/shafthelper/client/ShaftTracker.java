@@ -337,108 +337,134 @@ public final class ShaftTracker {
             });  
     }
 
-    private static void refreshHudLines() {
-        if (!config.trackerEnabled) {   
-            trackerLines = List.of();  
-            profitLines = List.of();  
-            logLines = List.of();  
-            return;  
-        }  
-        Map<String, Double> current = prices;  
+private static void refreshHudLines() {
+    Map<String, Double> current = prices;
 
-        List<Component> profit = new ArrayList<>();  
-        if (config.miningSpeed > 0 && current != null) {  
-            profit.addAll(trackerLine(current));  
-        } 
-        profitLines = profit;
-  
-        // --- Tracker box: header + overview ---  
-        List<Component> tracker = new ArrayList<>();  
-        if (config.miningSpeed <= 0) {  
-            tracker.add(header("Shaft Helper"));  
-            tracker.add(gray("Waiting for stats (tab list Stats widget)"));  
-        } else if (current == null) {  
-            tracker.add(header("Shaft Helper (fetching prices...)"));  
-        } else {  
-            tracker.add(header("Shaft Helper"));  
-        if (currentShaft().isPresent()
-            && currentShaftLapisCorpses() >= 0
-            && currentShaft().get().gem().isGemstone()) {
+    // --- Profit box ---
+    List<Component> profit = new ArrayList<>();
 
-            ShaftDetector.Shaft shaft = currentShaft().get();
-            int lapisCorpses = currentShaftLapisCorpses();
-
-            double profitWithCorpses =
-                calculateCurrentShaftProfit(
-                    shaft.gem(),
-                    lapisCorpses,
-                    current
-                );
-
-            MiningCalc.Strategy strategy =
-                MiningCalc.calculate(
-                    current,
-                    config.miningSpeed,
-                    config.miningFortune,
-                    config.gemstoneFortune,
-                    config.gemstoneSpread,
-                    config.pristine,
-                    config.coldRes,
-                    config.efficiency
-                );
-
-            boolean shouldMine =
-                strategy.shouldMine(shaft.gem(), lapisCorpses);
-
-            Component decision =
-                shouldMine
-                    ? Component.literal(" MINE").withStyle(ChatFormatting.GREEN)
-                    : Component.literal(" SKIP").withStyle(ChatFormatting.RED);
-
-            tracker.add(
-                gemColored(
-                    shaft.gem(),
-                    "Current " + shaft.gem().name()
-                    + " shaft (" + lapisCorpses + " lapis)"
-                )
-                .append(
-                    gray(": " + Format.compact(profitWithCorpses) + "/hr")
-                )
-                .append(decision)
-            );
-        }
-            tracker.addAll(overviewLines(current));  
-        }  
-        trackerLines = tracker;  
-  
-        // --- Log box: this session's shafts ---  
-        List<Component> log = new ArrayList<>();  
-        List<ShaftLog.Entry> entries = LOG.entries();
-        if (!LOG.isEmpty()) {  
-            log.add(gray("This session:"));  
-            for (ShaftLog.Entry entry : entries) {  
-                String shaftLabel = entry.number() + " " + entry.code();  
-                String corpseLabel = "";  
-                if (entry.lapisCorpses() >= 0) corpseLabel += entry.lapisCorpses() + "l";  
-                if (entry.umberCorpses() >= 0) corpseLabel += entry.umberCorpses() + "u";  
-                if (entry.tungstenCorpses() >= 0) corpseLabel += entry.tungstenCorpses() + "t";  
-                if (!corpseLabel.isEmpty()) shaftLabel += " " + corpseLabel;  
-                log.add(gemColored(entry.gem(), shaftLabel));  
-                if (entry.number() == entries.size() && currentShaft().isPresent()
-                    && currentShaft().get().code().equals(entry.code())) {
-                    double shaftProfit = PROCS.totalProfit() - entry.initialProfit();  
-                    if (shaftProfit > 0) log.add(gray("  Total: " + Format.compact(shaftProfit)));  
-                } else {  
-                    double shaftProfit = entry.finalProfit() - entry.initialProfit();  
-                    if (shaftProfit > 0) log.add(gray("  Total: " + Format.compact(shaftProfit)));  
-                }  
-            }  
-        }  
-        logLines = log;  
+    if (config.profitEnabled && config.miningSpeed > 0 && current != null) {
+        profit.addAll(trackerLine(current));
     }
+    profitLines = profit;
+
+    // --- Tracker box ---
+    List<Component> tracker = new ArrayList<>();
+
+    if (config.trackerEnabled) {
+        if (config.miningSpeed <= 0) {
+            tracker.add(header("Shaft Helper"));
+            tracker.add(gray("Waiting for stats (tab list Stats widget)"));
+        } else if (current == null) {
+            tracker.add(header("Shaft Helper (fetching prices...)"));
+        } else {
+            tracker.add(header("Shaft Helper"));
+
+            if (currentShaft().isPresent()
+                && currentShaftLapisCorpses() >= 0
+                && currentShaft().get().gem().isGemstone()) {
+
+                ShaftDetector.Shaft shaft = currentShaft().get();
+                int lapisCorpses = currentShaftLapisCorpses();
+
+                double profitWithCorpses =
+                    calculateCurrentShaftProfit(
+                        shaft.gem(),
+                        lapisCorpses,
+                        current
+                    );
+
+                MiningCalc.Strategy strategy =
+                    MiningCalc.calculate(
+                        current,
+                        config.miningSpeed,
+                        config.miningFortune,
+                        config.gemstoneFortune,
+                        config.gemstoneSpread,
+                        config.pristine,
+                        config.coldRes,
+                        config.efficiency
+                    );
+
+                boolean shouldMine =
+                    strategy.shouldMine(shaft.gem(), lapisCorpses);
+
+                Component decision =
+                    shouldMine
+                        ? Component.literal(" MINE").withStyle(ChatFormatting.GREEN)
+                        : Component.literal(" SKIP").withStyle(ChatFormatting.RED);
+
+                tracker.add(
+                    gemColored(
+                        shaft.gem(),
+                        "Current " + shaft.gem().name()
+                        + " shaft (" + lapisCorpses + " lapis)"
+                    )
+                    .append(
+                        gray(": " + Format.compact(profitWithCorpses) + "/hr")
+                    )
+                    .append(decision)
+                );
+            }
+            tracker.addAll(overviewLines(current));
+        }
+    }
+    trackerLines = tracker;
+
+    // --- Log box: this session's shafts ---
+    List<Component> log = new ArrayList<>();
+    if (config.logEnabled) {
+        List<ShaftLog.Entry> entries = LOG.entries();
+
+        if (!LOG.isEmpty()) {
+            log.add(gray("This session:"));
+
+            for (ShaftLog.Entry entry : entries) {
+                String shaftLabel = entry.number() + " " + entry.code();
+                String corpseLabel = "";
+
+                if (entry.lapisCorpses() >= 0)
+                    corpseLabel += entry.lapisCorpses() + "l";
+
+                if (entry.umberCorpses() >= 0)
+                    corpseLabel += entry.umberCorpses() + "u";
+
+                if (entry.tungstenCorpses() >= 0)
+                    corpseLabel += entry.tungstenCorpses() + "t";
+
+                if (!corpseLabel.isEmpty())
+                    shaftLabel += " " + corpseLabel;
+
+                log.add(gemColored(entry.gem(), shaftLabel));
+
+                if (entry.number() == entries.size()
+                    && currentShaft().isPresent()
+                    && currentShaft().get().code().equals(entry.code())) {
+
+                    double shaftProfit =
+                        PROCS.totalProfit() - entry.initialProfit();
+
+                    if (shaftProfit > 0)
+                        log.add(gray(
+                            "  Total: " + Format.compact(shaftProfit)
+                        ));
+
+                } else {
+                    double shaftProfit =
+                        entry.finalProfit() - entry.initialProfit();
+
+                    if (shaftProfit > 0)
+                        log.add(gray(
+                            "  Total: " + Format.compact(shaftProfit)
+                        ));
+                }
+            }
+        }
+    }
+    logLines = log;
+}
 
     private static List<Component> overviewLines(Map<String, Double> current) {
-
         MiningCalc.Strategy strategy =
             MiningCalc.calculate(
                 current,
@@ -453,65 +479,56 @@ public final class ShaftTracker {
 
         List<Component> lines = new ArrayList<>();
 
-        // Overall optimal long-run strategy.
-        lines.add(
-            Component.literal(
-                "Optimal: " +
-                Format.compact(strategy.coinsPerHour()) +
-                "/hr"
-            ).withStyle(ChatFormatting.GOLD)
+        lines.add(Component.literal(
+            "Optimal: " +
+            Format.compact(strategy.coinsPerHour()) +
+            "/hr"
+        ).withStyle(ChatFormatting.GOLD)
         );
 
-        // The effective threshold after efficiency.
-        lines.add(
-            Component.literal(
-                "Threshold: " +
-                Format.compact(strategy.threshold()) +
-                "/hr"
-            ).withStyle(ChatFormatting.GRAY)
+        lines.add(Component.literal(
+            "MINE≥ " +
+            Format.compact(strategy.threshold()) +
+            "/hr"
+        ).withStyle(ChatFormatting.GRAY)
         );
 
-        // How often a spawned shaft is worth mining.
-        lines.add(
-            Component.literal(
-                String.format(
-                    Locale.ROOT,
-                    "Accept: %.1f%% of shafts",
-                    strategy.acceptedProbability() * 100
-                )
-            ).withStyle(ChatFormatting.GRAY)
+        lines.add(Component.literal(String.format(
+            Locale.ROOT,
+            "Accept: %.1f%% of shafts",
+            strategy.acceptedProbability() * 100
+        )).withStyle(ChatFormatting.GRAY)
         );
 
-        // Accepted shaft groups.
-        for (MiningCalc.AcceptanceGroup group :
-                MiningCalc.acceptanceGroups(strategy)) {
+         // Find the lowest accepted lapis count for each gemstone.
+    java.util.Map<Gemstone, Integer> lowestAccepted = new java.util.LinkedHashMap<>();
 
-            String lapis;
+    for (MiningCalc.ShaftState state : strategy.acceptedStates()) {
+        lowestAccepted.merge(
+            state.gem(),
+            state.lapis(),
+            Math::min
+        );
+    }
 
-            if (group.minimumLapis() == group.maximumLapis()) {
-                lapis = group.minimumLapis() + "L";
-            } else {
-                lapis =
-                    group.minimumLapis()
-                    + "-"
-                    + group.maximumLapis()
-                    + "L";
-            }
+    // Display accepted gemstones, lowest accepted lapis -> 4L.
+    int shown = 0;
+    for (java.util.Map.Entry<Gemstone, Integer> entry : lowestAccepted.entrySet()) {
+        if (shown >= 12) break;
 
-            lines.add(
-                gemColored(
-                    group.gem(),
-                    "MINE " + group.gem().name()
-                ).append(
-                    Component.literal(
-                        " " + lapis
-                    ).withStyle(ChatFormatting.GREEN)
-                )
-            );
-        }
+        Gemstone gem = entry.getKey();
+        int lowestLapis = entry.getValue();
 
-        return lines;
-    } 
+        lines.add(
+            gemColored(
+                gem,
+                "MINE " + gem.name() + " " + lowestLapis + "-4L"
+            )
+        );
+        shown++;
+    }
+    return lines;
+}
 
     /** Maps a tracked drop/sack item display name to its Bazaar product id. */  
     private static String idFor(String name) {  
