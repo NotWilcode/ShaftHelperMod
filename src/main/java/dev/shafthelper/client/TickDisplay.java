@@ -1,12 +1,12 @@
 package dev.shafthelper.client;
 
+import dev.shafthelper.config.ModConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import dev.shafthelper.config.ModConfig;
 
 /**
  * Displays tick timing information similar to PingOffsetMiner.
@@ -32,7 +32,7 @@ public final class TickDisplay implements HudElement {
         if (client.getDebugOverlay().showDebugScreen()) return;
         
         // Get timing data from MiningCalculator
-        int ticksElapsed = MiningCalculator.getTicksElapsed();
+        double ticksElapsed = MiningCalculator.getClientTicksElapsed();
         double ticksNeeded = MiningCalculator.getTicksNeeded();
         boolean timeoutExceeded = MiningCalculator.isTimeoutExceeded();
         
@@ -50,7 +50,7 @@ public final class TickDisplay implements HudElement {
         int y = position(config.tickY, graphics.guiHeight(), boxH);
         
         // Format tick string
-        String tickString = String.format("%d/%.0f", ticksElapsed, ticksNeeded);
+        String tickString = String.format("%.1f/%.1f", ticksElapsed, ticksNeeded);
         int color = timeoutExceeded ? POST_MINED_COLOR : PRE_MINED_COLOR;
         int inset = Math.max(1, (int) Math.round(2 * config.tickScale));
         
