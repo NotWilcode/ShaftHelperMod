@@ -65,12 +65,13 @@ public final class MiningCalculator implements HudElement {
     // Track current block and timing state
     private static boolean wasTimeoutExceeded = false;
     private static BlockPos currentBlock;
+    private static BlockPos miningBlock;
     private static double ticksNeeded;
+    private static double estimatedTicksAtStart = 0.0;
     private static boolean timeoutExceeded;
-    private static int startServerTick;
+    private static double serverTicksElapsed = 0.0;
     private static int ticksElapsed = 0;
     private static long mineStartWallMs = 0L;  
-    private static double estimatedTicksAtStart = 0.0;
 
     public static void register() {
         if (!initialized) {
@@ -83,56 +84,92 @@ public final class MiningCalculator implements HudElement {
         if (client.player == null || client.level == null) return;  
         Player player = client.player;  
     
-        // Detect the block being looked at (runs regardless of HUD visibility)  
+        // Detect the block being looked at.
         BlockPos blockPos = null;  
         Integer blockHardness = null;  
+
         HitResult hit = player.pick(4.5, 0.0f, false);  
+
         if (hit != null && hit.getType() == HitResult.Type.BLOCK) {  
             blockPos = ((BlockHitResult) hit).getBlockPos();  
+
             Block block = client.level.getBlockState(blockPos).getBlock();  
             blockHardness = BLOCK_HARDNESSES.get(getSkyblockBlockName(block));  
         }  
     
         // Not actively mining a tracked block -> reset  
-        if (!client.options.keyAttack.isDown() || blockHardness == null) {  
+        if (!client.options.keyAttack.isDown() || blockPos == null || blockHardness == null) {  
             ticksElapsed = 0;  
-            startServerTick = player.tickCount;  
+            serverTicksElapsed = 0.0;  
+
             timeoutExceeded = false;  
             wasTimeoutExceeded = false;
-            currentBlock = blockPos;  
+
+            currentBlock = null;  
+            miningBlock = null;
+            mineStartWallMs = 0L;
+
             return;  
         }  
-    
-        // New tracked block -> start timing and count it as expected  
-        if (blockPos != null && !blockPos.equals(currentBlock)) {  
-            currentBlock = blockPos;  
-            startServerTick = player.tickCount;  
-            mineStartWallMs = System.currentTimeMillis();  
-            estimatedTicksAtStart = ticksNeeded; // may be 0 on first tick; refresh below
-            ticksElapsed = 0;  
-            timeoutExceeded = false;  
+
+        // New tracked block -> start timing and freeze the estimate
+        if (!blockPos.equals(currentBlock)) {
+            ModConfig config = ShaftTracker.config();
+
+            double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;
+
+            int professionalLevel = Math.min(config.proffesionalLevel, 141);
+            if (config.goblinOmelette) {
+                professionalLevel++;
+            }
+
+            double addedGemstoneSpeed = 50 + (professionalLevel * 5);
+            double actualMiningSpeed = miningSpeed + addedGemstoneSpeed + ShaftTracker.miningSpeedBonus();
+
+            ticksNeeded = Math.max(1, blockHardness * 30 / actualMiningSpeed);
+            estimatedTicksAtStart = ticksNeeded;
+
+            currentBlock = blockPos;
+            miningBlock = blockPos;
+
+            mineStartWallMs = System.currentTimeMillis();
+
+            serverTicksElapsed = 0.0;
+            ticksElapsed = 0;
+
+            timeoutExceeded = false;
             wasTimeoutExceeded = false;
-            EfficiencyDisplay.onBlockExpected();  
-        }  
-    
-        ModConfig config = ShaftTracker.config();  
-        double miningSpeed = config.miningSpeed > 0 ? config.miningSpeed : 50.0;    
-        int professionalLevel = config.proffesionalLevel;  
-        professionalLevel = Math.min(professionalLevel, 141); 
-        if (config.goblinOmelette) professionalLevel += 1;   
-        double addedGemstoneSpeed = 50 + (professionalLevel * 5); 
-        double actualMiningSpeed = miningSpeed + addedGemstoneSpeed + ShaftTracker.miningSpeedBonus();
-        ticksNeeded = Math.round(blockHardness * 30 / actualMiningSpeed);
-            estimatedTicksAtStart = ticksNeeded; // store the fresh estimate for calibration
-    
-        ticksElapsed = player.tickCount - startServerTick;  
-        double pingOffset = computePingOffset(ticksNeeded);  
-        timeoutExceeded = ticksNeeded > 0 && ticksElapsed >= pingOffset;  
+
+            EfficiencyDisplay.onBlockExpected();
+        }
+
+        long elapsedMs = System.currentTimeMillis() - mineStartWallMs;
+        double serverMsPerTick = ServerStats.getWallClockMsPerTick();
+
+        if (serverMsPerTick <= 0.0) {
+            serverMsPerTick = 50.0; // Fallback to default
+        }
+
+        double oneWayPingMs = Math.max(0.0, ServerStats.getPing() / 2.0);
+        double serverElapsedMs = Math.max(0.0, elapsedMs - oneWayPingMs);
+
+        serverTicksElapsed = serverElapsedMs / serverMsPerTick;
+
+        serverTicksElapsed = Math.clamp(serverTicksElapsed, 0.0, ticksNeeded);
+
+        ticksElapsed = Math.min((int) Math.floor(serverTicksElapsed), (int) Math.ceil(ticksNeeded));
+
+        double glideMs = computeGlideMs(ticksNeeded);
+
+        timeoutExceeded = ticksNeeded > 0 && ticksElapsed >= glideMs;
     
         if (timeoutExceeded && !wasTimeoutExceeded && ShaftTracker.config().pingSoundAlert) {  
             client.getSoundManager().play(  
                 net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(  
-                    net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING, 2.0f));  
+                    net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING, 
+                    2.0f
+                )
+            );  
         }  
         wasTimeoutExceeded = timeoutExceeded;  
     }
@@ -141,48 +178,95 @@ public final class MiningCalculator implements HudElement {
     public static int getTicksElapsed() {
         return ticksElapsed;
     }
-    
+
+    public static double getServerTicksElapsed() {
+        return serverTicksElapsed;
+    }
+
     public static double getTicksNeeded() {
         return ticksNeeded;
     }
-    
+
     public static boolean isTimeoutExceeded() {
         return timeoutExceeded;
+    }
+
+    public static BlockPos getCurrentBlock() {
+        return currentBlock;
+    }
+
+    public static BlockPos getMiningBlock() {
+        return miningBlock;
+    }
+
+    public static long getMineStartWallMs() {
+        return mineStartWallMs;
+    }
+
+    public static double getEstimatedTicks() {
+        return estimatedTicksAtStart;
     }
     
     // Reset tick counter when block is mined
     public static void onBlockMined() {
         ticksElapsed = 0;
-        startServerTick = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.tickCount : 0;
+        serverTicksElapsed = 0.0;
+
         timeoutExceeded = false;
         wasTimeoutExceeded = false;
+
+        currentBlock = null;
+        miningBlock = null;
+        mineStartWallMs = 0L;
     }
 
-    public static BlockPos getCurrentBlock()  { return currentBlock; }
-    public static long getMineStartWallMs()   { return mineStartWallMs; }  
-    public static double getEstimatedTicks()   { return estimatedTicksAtStart; }
+    private static double computeGlideMs(double ticksNeeded) {
+        if (ticksNeeded <= 0) return 0.0;
 
-    /** Shared ping/TPS-adjusted offset used by both the sound alert and the display. */  
-    private static double computePingOffset(double ticksNeeded) {  
-        if (ticksNeeded <= 0) return ticksNeeded;  
-        // Server-side break time scales with how long each tick actually takes.  
-        double tpsFactor = ServerStats.getWallClockMsPerTick() / 50.0;
-        double effectiveTicks = ticksNeeded * tpsFactor;  
-        double ping = ServerStats.getPing();  
-        if (ping <= 0) return effectiveTicks;  
-        double pingTicks = ping / 50.0; // network latency is TPS-independent (client ticks)  
-        return Math.min(ticksNeeded, Math.max(0.0, effectiveTicks - pingTicks));
+        double serverMsPerTick = ServerStats.getWallClockMsPerTick();
+
+        if (serverMsPerTick <= 0.0) {
+            serverMsPerTick = 50.0; // Fallback to default
+        }
+
+        double serverBreakMs = ticksNeeded * serverMsPerTick;
+        double pingMs = Math.max(0.0, ServerStats.getPing());
+
+        return Math.max(0.0, serverBreakMs - pingMs);
+    }
+
+    private static double computeGlideTicks(double ticksNeeded) {
+        if (ticksNeeded <= 0) return 0.0;
+
+        double serverMsPerTick = ServerStats.getWallClockMsPerTick();
+
+        if (serverMsPerTick <= 0.0) {
+            serverMsPerTick = 50.0; // Fallback to default
+        }
+
+        return computeGlideMs(ticksNeeded) / serverMsPerTick;
     }
 
     /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  
     public static double computeEffectiveTicks(double ticks) {  
-        double pingTicks = ServerStats.getPing() / ServerStats.getMsPerTick();  
+        double pingTicks = Math.max(0.0, ServerStats.getPing()) / 50.0;  
+
         return ticks + pingTicks;  
     }
 
     public static double computeIdealBreakMs(double ticks) {
         if (ticks <= 0.0) return 0.0;
-        return ticks * ServerStats.getWallClockMsPerTick() + Math.max(0L, ServerStats.getPing());
+
+        double serverMsPerTick = ServerStats.getWallClockMsPerTick();
+
+        if (serverMsPerTick <= 0.0) {
+            serverMsPerTick = 50.0; // Fallback to default
+        }
+
+        double serverBreakMs = ticks * serverMsPerTick;
+        double pingMs = Math.max(0.0, ServerStats.getPing());
+
+        return serverBreakMs + pingMs;
     }
     
     /**  
@@ -192,7 +276,9 @@ public final class MiningCalculator implements HudElement {
      */  
     public static int getPingEfficiency() {  
         double eff = computeEffectiveTicks(ticksNeeded);  
+
         if (eff <= 0 || ticksNeeded <= 0) return 100;  
+
         return (int) Math.round(ticksNeeded / eff * 100.0);  
     }
 
@@ -226,14 +312,6 @@ public final class MiningCalculator implements HudElement {
             if (blockHardness == null) {
                 return; // Not a tracked block
             }
-
-            // Reset timing state if block changed
-            if (!blockPos.equals(currentBlock) || !client.options.keyAttack.isDown()) {
-                timeoutExceeded = false;
-                currentBlock = blockPos;
-                startServerTick = player.tickCount;
-                ticksElapsed = 0;
-            }
             
             // Get mining speed from config
             ModConfig config = ShaftTracker.config();
@@ -246,16 +324,19 @@ public final class MiningCalculator implements HudElement {
             double addedGemstoneSpeed = 50 + (professionalLevel * 5);
             double actualMiningSpeed = MiningSpeed + addedGemstoneSpeed + ShaftTracker.miningSpeedBonus();
             
-            // Calculate ticks needed using PingOffsetMiner formula
-            ticksNeeded = Math.round(blockHardness * 30 / (actualMiningSpeed));
-            
             // Display the information
             Font font = client.font;
 
             // Get ping from method
             int ping = (int) ServerStats.getPing();  
             double tps = ServerStats.getTps();  
-            double pingOffset = computePingOffset(ticksNeeded);
+            double serverMsPerTick = ServerStats.getWallClockMsPerTick();
+
+            if (serverMsPerTick <= 0.0) {
+                serverMsPerTick = 50.0; // Fallback to default
+            }
+
+            double pingOffset = computeGlideMs(ticksNeeded);
             
             // Calculate width based on the text we'll display
             String displayName = skyblockBlockName.replace("skyblock:", "").replace("_gemstone", "");  
@@ -304,10 +385,10 @@ public final class MiningCalculator implements HudElement {
             graphics.text(font, Component.literal(displayName), x + inset, textY, accent, true);
             
             // Draw mining ticks needed
-            graphics.text(font, Component.literal(String.format("Ticks: %.0f", ticksNeeded)), x + inset, textY + lineGap, text, true);
+            graphics.text(font, Component.literal(String.format("Ticks: %.0f / %.0f", serverTicksElapsed, ticksNeeded)), x + inset, textY + lineGap, text, true);
             
             // Draw ping offset
-            graphics.text(font, Component.literal(String.format("Offset: %.1f", pingOffset)), x + inset, textY + lineGap * 2, text, true);
+            graphics.text(font, Component.literal(String.format("Glide: %.1f ticks", pingOffset)), x + inset, textY + lineGap * 2, text, true);
             
             // Draw status
             String statusText = timeoutExceeded ? "MOVE NOW" : "MINING...";

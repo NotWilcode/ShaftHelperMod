@@ -38,7 +38,7 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
         }  
   
         if (packet instanceof ClientboundBlockUpdatePacket update) {  
-            BlockPos tracked = dev.shafthelper.client.MiningCalculator.getCurrentBlock();  
+            BlockPos tracked = dev.shafthelper.client.MiningCalculator.getMiningBlock();  
   
             if (tracked != null  
                     && update.getPos().equals(tracked)  

@@ -11,8 +11,8 @@ import java.util.Optional;
 
 import dev.shafthelper.config.ModConfig;
 import dev.shafthelper.core.AreaDetector;
-import dev.shafthelper.core.CorpseLootParser;
 import dev.shafthelper.core.Cold;
+import dev.shafthelper.core.CorpseLootParser;
 import dev.shafthelper.core.DropTracker;
 import dev.shafthelper.core.Format;
 import dev.shafthelper.core.Gemstone;
@@ -30,13 +30,14 @@ import dev.shafthelper.core.StatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScoreEntry;
@@ -72,6 +73,8 @@ public final class ShaftTracker {
     private static volatile List<Component> profitLines = List.of();
     private static volatile MiningFiesta.State miningFiesta = MiningFiesta.State.empty();
     private static MayhemBuff mayhemBuff = MayhemBuff.NONE;
+
+    private static final ShaftSpawnTracker SHAFT_SPAWN = new ShaftSpawnTracker();
 
     private enum MayhemBuff {
         NONE, MINING_FORTUNE, MINING_SPEED, COLD_RESISTANCE
@@ -166,7 +169,8 @@ public final class ShaftTracker {
                 LOG.leave(finalProfit);  
                 LOG.clear();  
                 PROCS.resetAll();  
-                DROPS.resetSession();  
+                DROPS.resetSession(); 
+                SHAFT_SPAWN.reset(); 
                 currentLapisCorpses = -1;  
                 currentUmberCorpses = -1;  
                 currentTungstenCorpses = -1;  
@@ -181,7 +185,7 @@ public final class ShaftTracker {
     
         List<String> lines = collectLines(client, connection);  
         miningFiesta = MiningFiesta.parse(lines);
-        if (config.autoStats) readStats(lines);  
+        if (config.autoStats) readStats(client, lines);  
         readLapisCorpses(lines);  
         detectedArea = AreaDetector.detect(lines);  
     
@@ -197,6 +201,7 @@ public final class ShaftTracker {
                 LOG.clear();  
                 PROCS.resetAll();  
                 DROPS.resetSession();  
+                SHAFT_SPAWN.reset();
                 currentLapisCorpses = -1;  
                 currentUmberCorpses = -1;  
                 currentTungstenCorpses = -1;  
@@ -211,7 +216,6 @@ public final class ShaftTracker {
         }  
     
         Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);  
-        if (config.autoStats) readStats(lines);
         readLapisCorpses(lines);
         detectedArea = AreaDetector.detect(lines);
         
@@ -221,13 +225,15 @@ public final class ShaftTracker {
             missingShaftScans = 0;
             double initialProfit = PROCS.totalProfit();
             LOG.enter(shaft.get(), currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses, System.currentTimeMillis(), initialProfit);
-            double measuredSpawnMinutes = shaftSpawnTracker.onShaftEnter();
+            double measuredSpawnMinutes = SHAFT_SPAWN.onShaftEnter(PROCS.totalProfit());
             detectedShaft = shaft;
         } else if (shaft.isPresent() && detectedShaft.isPresent() && !shaft.get().code().equals(detectedShaft.get().code())) {
             // Switching shafts
             missingShaftScans = 0;
             double finalProfit = PROCS.totalProfit();
             LOG.leave(finalProfit);
+            SHAFT_SPAWN.onShaftExit(PROCS.totalProfit());
+            double measuredSpawnMinutes = SHAFT_SPAWN.onShaftEnter(PROCS.totalProfit());
             double initialProfit = PROCS.totalProfit();
             LOG.enter(shaft.get(), currentLapisCorpses, currentUmberCorpses, currentTungstenCorpses, System.currentTimeMillis(), initialProfit);
             detectedShaft = shaft;
@@ -236,7 +242,7 @@ public final class ShaftTracker {
             if (++missingShaftScans >= 2) {
                 double finalProfit = PROCS.totalProfit();
                 LOG.leave(finalProfit);
-                shaftSpawnTracker.onShaftExit();
+                SHAFT_SPAWN.onShaftExit(PROCS.totalProfit());
                 detectedShaft = Optional.empty();
                 missingShaftScans = 0;
             }
@@ -326,9 +332,15 @@ public final class ShaftTracker {
         return lines;  
     }
 
-    private static void readStats(List<String> lines) {
+    private static void readStats(Minecraft client, List<String> lines) {
+        // Only update mining stats while actually holding a mining tool.
+        if (client.player == null || !isMiningTool(client.player.getMainHandItem())) {
+            return;
+        }
+
         StatsParser.Stats stats = StatsParser.parse(lines);
         boolean changed = false;
+
         if (stats.miningSpeed() != null && (int) (double) stats.miningSpeed() != config.miningSpeed) {
             config.miningSpeed = (int) (double) stats.miningSpeed();
             changed = true;
@@ -451,6 +463,16 @@ public final class ShaftTracker {
                             current
                         );
 
+                    double spawnCoinsPerHour =
+                        SHAFT_SPAWN.hasSpawnTime()
+                            ? SHAFT_SPAWN.getAverageSpawnCoinsPerHour()
+                            : 0.0;
+
+                    double spawnMinutes =
+                        SHAFT_SPAWN.hasSpawnTime()
+                            ? SHAFT_SPAWN.getAverageSpawnMinutes()
+                            : MiningCalc.SHAFT_SPAWN_MINUTES;
+
                     MiningCalc.Strategy strategy =
                         MiningCalc.calculate(
                             current,
@@ -460,7 +482,9 @@ public final class ShaftTracker {
                             effectiveGemstoneSpread(),
                             config.pristine,
                             effectiveColdResistance(),
-                            config.efficiency
+                            config.efficiency,
+                            spawnCoinsPerHour,
+                            spawnMinutes
                         );
 
                     boolean shouldMine =
@@ -542,16 +566,29 @@ public final class ShaftTracker {
     }
 
     private static List<Component> overviewLines(Map<String, Double> current) {
-        MiningCalc.Strategy strategy = MiningCalc.calculate(
-            current,
-            effectiveMiningSpeed(),
-            effectiveMiningFortune(),
-            config.gemstoneFortune,
-            effectiveGemstoneSpread(),
-            config.pristine,
-            effectiveColdResistance(),
-            config.efficiency
-        );
+        double spawnCoinsPerHour =
+            SHAFT_SPAWN.hasSpawnTime()
+                ? SHAFT_SPAWN.getAverageSpawnCoinsPerHour()
+                : 0.0;
+
+        double spawnMinutes =
+            SHAFT_SPAWN.hasSpawnTime()
+                ? SHAFT_SPAWN.getAverageSpawnMinutes()
+                : MiningCalc.SHAFT_SPAWN_MINUTES;
+
+        MiningCalc.Strategy strategy =
+            MiningCalc.calculate(
+                current,
+                effectiveMiningSpeed(),
+                effectiveMiningFortune(),
+                config.gemstoneFortune,
+                effectiveGemstoneSpread(),
+                config.pristine,
+                effectiveColdResistance(),
+                config.efficiency,
+                spawnCoinsPerHour,
+                spawnMinutes
+            );
 
         List<Component> lines = new ArrayList<>();
 
@@ -578,6 +615,11 @@ public final class ShaftTracker {
                 "Threshold: %.1fM/hr",
                 strategy.threshold() / 1_000_000.0
             );
+
+        lines.add(gray(spawnRateText));
+        lines.add(gray(spawnTimeText));
+        lines.add(gray(optimalText));
+        lines.add(gray(thresholdText));
 
          // Find the lowest accepted lapis count for each gemstone.
         java.util.Map<Gemstone, Integer> lowestAccepted = new java.util.LinkedHashMap<>();
@@ -627,9 +669,46 @@ public final class ShaftTracker {
         };
     }
 
+    private static boolean isMiningTool(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+
+        String name = stack.getHoverName().getString().trim();
+
+        return name.endsWith("Mithril Drill SX-R226")
+            || name.endsWith("Mithril Drill SX-R326")
+            || name.endsWith("Titanium Drill DR-X355")
+            || name.endsWith("Titanium Drill DR-X455")
+            || name.endsWith("Titanium Drill DR-X555")
+            || name.endsWith("Titanium Drill DR-X655")
+            || name.endsWith("Divan's Drill")
+            || name.endsWith("Ruby Drill TX-15")
+            || name.endsWith("Gemstone Drill LT-522")
+            || name.endsWith("Topaz Drill KGR-12")
+            || name.endsWith("Jasper Drill X")
+            || name.endsWith("Rookie Pickaxe")
+            || name.endsWith("Promising Pickaxe")
+            || name.endsWith("Zombie Pickaxe")
+            || name.endsWith("Lapis Pickaxe")
+            || name.endsWith("Fractured Mithril Pickaxe")
+            || name.endsWith("Bandaged Mithril Pickaxe")
+            || name.endsWith("Mithril Pickaxe")
+            || name.endsWith("Jungle Pickaxe")
+            || name.endsWith("Refined Mithril Pickaxe")
+            || name.endsWith("Rusty Titanium Pickaxe")
+            || name.endsWith("Titanium Pickaxe")
+            || name.endsWith("Polished Titanium Pickaxe")
+            || name.endsWith("Stonk")
+            || name.endsWith("Pickonimbus 2000")
+            || name.endsWith("Bingonimbus 2000")
+            || name.endsWith("Gemstone Gauntlet");
+    }
+
     /** Coins/hr the pristine procs actually earned, to hold against the theoretical ranking. */  
     private static List<Component> trackerLine(Map<String, Double> current) {  
         List<Component> lines = new ArrayList<>();  
+        // Uses PROC.estimate currently, thats BAD. change to spawn-phase profit estimate instead.
         PROCS.estimate(current, config.pristine, System.currentTimeMillis())  
             .ifPresent(estimate -> {  
                 lines.add(Component.literal("Tracker: " + estimate.procs() + " proc"  
@@ -685,8 +764,6 @@ public final class ShaftTracker {
   
         return lines;  
     }
-
-    private final ShaftSpawnTracker shaftSpawnTracker = new ShaftSpawnTracker();
 
     private static String minutes(long elapsedMs) {
         long minutes = elapsedMs / 60_000;

@@ -171,6 +171,8 @@ public final class MiningCalc {
         double expectedCoinsPerCycle,
         double expectedMinutesPerCycle,
         double acceptedProbability,
+        double spawnCoinsPerHour,
+        double spawnMinutes,
         List<ShaftState> acceptedStates,
         List<ShaftState> allStates
     ) {
@@ -300,13 +302,6 @@ public final class MiningCalc {
      * Since the shaft duration is identical for all states, the
      * optimal strategy is guaranteed to be a threshold strategy.
      */
-    double spawnCoinsPerHour = YOUR_EXISTING_PROFIT_CALC_MHR;
-
-    double spawnMinutes =
-        ShaftSpawnTracker.hasSpawnTime()
-            ? ShaftSpawnTracker.getAverageSpawnMinutes()
-            : MiningCalc.SHAFT_SPAWN_MINUTES;
-
     public static Strategy calculate(
         Map<String, Double> prices,
         int miningSpeed,
@@ -525,29 +520,5 @@ public final class MiningCalc {
 
         return result;
     }
-
-    public double getAverageSpawnMinutes() {
-        if (samples.isEmpty()) {
-            return -1;
-        }
-
-        double[] values = new double[samples.size()];
-
-        int i = 0;
-        for (double sample : samples) {
-            values[i++] = sample;
-        }
-
-        java.util.Arrays.sort(values);
-
-        int middle = values.length / 2;
-
-        if (values.length % 2 == 0) {
-            return (values[middle - 1] + values[middle]) / 2.0;
-        }
-
-        return values[middle];
-    }
-
     private MiningCalc() {}
 }
