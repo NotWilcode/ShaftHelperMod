@@ -176,9 +176,9 @@ private final ModConfig config = ShaftTracker.config();
     private int contentHeightFor(Tab t) {  
         int rows = switch (t) {  
             case STATS -> 10;  
-            case HUD -> 13;
+            case HUD -> 12;
             case OPTIONS -> 3;  
-            case COSMETIC -> 4;
+            case COSMETIC -> 5;
             case WAYPOINTS -> 6;  
         };  
         return HEADER_HEIGHT + rows * ROW_HEIGHT;  
@@ -284,16 +284,6 @@ private final ModConfig config = ShaftTracker.config();
             config.pickaxeAbilityEnabled, v -> config.pickaxeAbilityEnabled = v)));
         addLabel("Pickaxe popup", y);
         y += ROW_HEIGHT;
-
-        StyledButton themeButton = new StyledButton(
-            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
-            Component.literal(capitalize(config.guiTheme)), b -> {
-                config.cycleTheme();
-                rebuildWidgets();
-            });
-        tabContent.add(addRenderableWidget(themeButton));
-        addLabel("Theme", y);
-        y += ROW_HEIGHT;
     
         return y;  
     }
@@ -317,6 +307,17 @@ private final ModConfig config = ShaftTracker.config();
 
     private int buildCosmetic(int y) {
         y = section("Cosmetic", y);
+        
+        StyledButton themeButton = new StyledButton(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            Component.literal(capitalize(config.guiTheme)), b -> {
+                config.cycleTheme();
+                rebuildWidgets();
+            });
+        tabContent.add(addRenderableWidget(themeButton));
+        addLabel("Theme", y);
+        y += ROW_HEIGHT;
+
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
             config.corpseOpeningAnimationEnabled, v -> config.corpseOpeningAnimationEnabled = v)));

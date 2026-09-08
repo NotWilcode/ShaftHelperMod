@@ -98,6 +98,21 @@ public final class ShaftTracker {
         return LOG;
     }
 
+    /** Latest fetched Bazaar prices (product id -> unit price), or null before the first fetch. */  
+    public static Map<String, Double> prices() {  
+        return prices;  
+    }  
+  
+    /** Corpse-loot display name -> current Bazaar unit price, or null if unknown. */  
+    public static Double corpseItemUnitPrice(String displayName) {  
+        Map<String, Double> current = prices;  
+        if (current == null || displayName == null) return null;  
+        String id = DropTracker.idFor(displayName);  
+        if (id == null) return null;  
+        Double price = current.get(id);  
+        return (price != null && Double.isFinite(price) && price > 0) ? price : null;  
+    }
+
     public static List<Component> trackerLines() { return trackerLines; }
     public static List<Component> profitLines() { return profitLines; }
     public static List<Component> logLines() { return logLines; } 

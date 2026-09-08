@@ -1,5 +1,7 @@
 package dev.shafthelper.client;
 
+import dev.shafthelper.core.Format;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,14 +41,108 @@ public final class CorpseOpeningScreen extends Screen {
 
     // ---- state ------------------------------------------------------------
 
-    private final List<RewardEntry> reelItems;
-    private final RewardEntry winner;
-    private final double finalScrollOffset;
+    private final List<RewardEntry> reelItems;  
+    private final RewardEntry winner;   // the real best reward you got - lands under the pointer  
+    private final RewardEntry jackpot;  // rarest table item - teases past right before landing 
+    private final Function<String, Double> priceLookup;  
+    private final double totalProfit;   // real bazaar coins for everything you got 
+    private final double finalScrollOffset;  
     private final double jitterPx;
 
     private long startTimeMs = -1;
     private long landedAtMs = -1;
     private boolean skipped = false;
+
+    // ---- Vanguard loot table (from the Hypixel SkyBlock wiki) -----------  
+    // weight = drop weight; LOWER weight = rarer = flashier. We turn weight  
+    // into a display "value" (160 / weight) purely so color banding and the  
+    // jackpot tease rank correctly. Presentation only, not real prices.  
+    private record VanguardDrop(String name, long amount, int weight) {  
+        double rarityValue() { return 160.0 / weight; }  
+    }  
+  
+    private static final List<VanguardDrop> VANGUARD_LOOT_TABLE = List.of(  
+        new VanguardDrop("Flawless Onyx Gemstone", 1, 160),  
+        new VanguardDrop("Flawless Onyx Gemstone", 2, 80),  
+        new VanguardDrop("Flawless Citrine Gemstone", 1, 160),  
+        new VanguardDrop("Flawless Citrine Gemstone", 2, 80),  
+        new VanguardDrop("Flawless Peridot Gemstone", 1, 160),  
+        new VanguardDrop("Flawless Peridot Gemstone", 2, 80),  
+        new VanguardDrop("Flawless Aquamarine Gemstone", 1, 160),  
+        new VanguardDrop("Flawless Aquamarine Gemstone", 2, 80),  
+        new VanguardDrop("Dwarven O's Metallic Minis", 1, 120),  
+        new VanguardDrop("Suspicious Scrap", 8, 160),  
+        new VanguardDrop("Suspicious Scrap", 16, 80),  
+        new VanguardDrop("Enchanted Book (Ice Cold I)", 1, 160),  
+        new VanguardDrop("Blue Goblin Egg", 1, 160),  
+        new VanguardDrop("Blue Goblin Egg", 2, 80),  
+        new VanguardDrop("Refined Umber", 1, 160),  
+        new VanguardDrop("Refined Umber", 2, 80),  
+        new VanguardDrop("Refined Tungsten", 1, 160),  
+        new VanguardDrop("Refined Tungsten", 2, 80),  
+        new VanguardDrop("Glacite Amalgamation", 1, 160),  
+        new VanguardDrop("Glacite Amalgamation", 2, 80),  
+        new VanguardDrop("Glacite Amalgamation", 4, 40),  
+        new VanguardDrop("Mithril Plate", 1, 60),  
+        new VanguardDrop("Umber Plate", 1, 30),  
+        new VanguardDrop("Tungsten Plate", 1, 30),  
+        new VanguardDrop("Umber Key", 1, 80),  
+        new VanguardDrop("Umber Key", 2, 40),  
+        new VanguardDrop("Umber Key", 4, 20),  
+        new VanguardDrop("Tungsten Key", 1, 80),  
+        new VanguardDrop("Tungsten Key", 2, 40),  
+        new VanguardDrop("Tungsten Key", 4, 20),  
+        new VanguardDrop("Skeleton Key", 1, 10),  
+        new VanguardDrop("Frozen Scute", 1, 10),  
+        new VanguardDrop("Caged Wisp", 1, 10),  
+        new VanguardDrop("Shattered Locket", 1, 5),  
+        new VanguardDrop("Opal Crystal", 1, 120),  
+        new VanguardDrop("Onyx Crystal", 1, 120),  
+        new VanguardDrop("Peridot Crystal", 1, 120),  
+        new VanguardDrop("Citrine Crystal", 1, 120),  
+        new VanguardDrop("Aquamarine Crystal", 1, 120)  
+    );  
+  
+    private static List<RewardEntry> lootTableEntries() {  
+        List<RewardEntry> list = new ArrayList<>();  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
+            list.add(new RewardEntry(d.name(), d.amount(), d.rarityValue()));  
+        }  
+        return list;  
+    }  
+  
+    /** Most-valued item in the whole table by real bazaar price (rarity as fallback). */  
+    private static RewardEntry jackpotFromTable(Function<String, Double> priceLookup) {  
+        RewardEntry best = null;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
+            Double price = priceLookup == null ? null : priceLookup.apply(d.name());  
+            double unitValue = (price != null && !price.isNaN() && price > 0)  
+                ? price : d.rarityValue();  
+            RewardEntry e = new RewardEntry(d.name(), d.amount(), unitValue);  
+            if (best == null || e.totalValue() > best.totalValue()) best = e;  
+        }  
+        return best;  
+    }  
+  
+    /** Real bazaar coins for the whole corpse, skipping items with no known price. */  
+    private static double coinValueOf(Map<String, Long> rewards, Function<String, Double> priceLookup) {  
+        if (priceLookup == null) return 0;  
+        double total = 0;  
+        for (Map.Entry<String, Long> e : rewards.entrySet()) {  
+            Double price = priceLookup.apply(e.getKey());  
+            if (price != null && !price.isNaN() && price > 0) total += e.getValue() * price;  
+        }  
+        return total;  
+    }
+  
+    /** Table-derived rarity value for a real reward name, so unknown-price items still rank sensibly. */  
+    private static double rarityValueFor(String name) {  
+        double v = 1.0;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
+            if (d.name().equalsIgnoreCase(name)) v = Math.max(v, d.rarityValue());  
+        }  
+        return v;  
+    }
 
     public record RewardEntry(String name, long amount, double unitValue) {
         double totalValue() {
@@ -64,43 +160,53 @@ public final class CorpseOpeningScreen extends Screen {
     public CorpseOpeningScreen(Map<String, Long> rewards, Function<String, Double> priceLookup) {
         super(Component.literal("Vanguard Corpse Loot"));
 
-        List<RewardEntry> entries = new ArrayList<>();
-        for (Map.Entry<String, Long> e : rewards.entrySet()) {
-            Double price = priceLookup == null ? null : priceLookup.apply(e.getKey());
-            double unitValue = (price != null && !price.isNaN() && price > 0) ? price : 1.0;
-            entries.add(new RewardEntry(e.getKey(), e.getValue(), unitValue));
-        }
-        if (entries.isEmpty()) {
-            entries.add(new RewardEntry("Nothing", 1, 0.0));
-        }
-
-        RewardEntry best = entries.get(0);
-        for (RewardEntry e : entries) {
-            // If prices are unknown for everything, unitValue falls back to 1.0
-            // for all entries, so this effectively ranks by amount instead.
-            double bestScore = best.unitValue() > 1.0 ? best.totalValue() : best.amount();
-            double score = e.unitValue() > 1.0 ? e.totalValue() : e.amount();
-            if (score > bestScore) best = e;
-        }
-        this.winner = best;
-
-        this.reelItems = buildReel(entries, winner);
-
-        Random rnd = new Random();
-        // Land somewhere within the middle 60% of the slot, not dead center,
-        // so it doesn't feel mechanically identical every time.
-        this.jitterPx = (rnd.nextDouble() - 0.5) * (SLOT_WIDTH * 0.6);
+        List<RewardEntry> entries = new ArrayList<>();  
+        for (Map.Entry<String, Long> e : rewards.entrySet()) {  
+            Double price = priceLookup == null ? null : priceLookup.apply(e.getKey());  
+            // No price? Fall back to the loot table's rarity value so rare drops still rank high.  
+            double unitValue = (price != null && !price.isNaN() && price > 0)  
+                ? price : rarityValueFor(e.getKey());  
+            entries.add(new RewardEntry(e.getKey(), e.getValue(), unitValue));  
+        }  
+        if (entries.isEmpty()) {  
+            entries.add(new RewardEntry("Nothing", 1, 0.0));  
+        }  
+  
+        RewardEntry best = entries.get(0);  
+        for (RewardEntry e : entries) {  
+            if (e.totalValue() > best.totalValue()) best = e;  
+        }  
+        this.priceLookup = priceLookup;
+        this.winner = best;                 // truthful: this is what you actually got  
+        this.jackpot = jackpotFromTable(priceLookup);  // the flashy near-miss pulled from the full table  
+        this.totalProfit = coinValueOf(rewards, priceLookup);  
+        this.reelItems = buildReel(winner, jackpot);  
+  
+        // Land slightly off-center toward the jackpot side so the jackpot slot  
+        // (right before the winner) stays peeking at the pointer's edge - the  
+        // "you juuust about had it" frame. No randomness: tease every time.  
+        this.jitterPx = -(SLOT_WIDTH * 0.22);  
         this.finalScrollOffset = WINNER_INDEX * SLOT_STEP + (SLOT_WIDTH / 2.0) + jitterPx;
     }
 
-    private static List<RewardEntry> buildReel(List<RewardEntry> pool, RewardEntry winner) {
-        Random rnd = new Random();
-        List<RewardEntry> reel = new ArrayList<>(REEL_LENGTH);
-        for (int i = 0; i < REEL_LENGTH; i++) {
-            reel.add(pool.get(rnd.nextInt(pool.size())));
-        }
-        reel.set(WINNER_INDEX, winner);
-        return reel;
+    private static double scoreOf(RewardEntry e) {  
+        // If prices are unknown, unitValue is 1.0 for everything, so this ranks by amount.  
+        return e.unitValue() > 1.0 ? e.totalValue() : e.amount();  
+    }
+
+    private static List<RewardEntry> buildReel(RewardEntry landed, RewardEntry jackpot) {  
+        List<RewardEntry> pool = lootTableEntries();   // whole Vanguard table as filler  
+        Random rnd = new Random();  
+        List<RewardEntry> reel = new ArrayList<>(REEL_LENGTH);  
+        for (int i = 0; i < REEL_LENGTH; i++) {  
+            reel.add(pool.get(rnd.nextInt(pool.size())));  
+        }  
+        reel.set(WINNER_INDEX, landed);  
+        // Jackpot rides the two slots right before the landing slot, so during  
+        // the slow crawl it climbs to the pointer... then slips past. Max tease.  
+        reel.set(WINNER_INDEX - 1, jackpot);  
+        reel.set(WINNER_INDEX - 2, jackpot);  
+        return reel;  
     }
 
     // ---- lifecycle ----------------------------------------------------
@@ -159,7 +265,7 @@ public final class CorpseOpeningScreen extends Screen {
             landedAtMs = now;
         }
 
-        double eased = easeOutBack(t);
+        double eased = easeOutQuint(t);
         double scrollOffset = finalScrollOffset * eased;
 
         int centerX = width / 2;
@@ -183,14 +289,23 @@ public final class CorpseOpeningScreen extends Screen {
         gg.fill(centerX - 8, reelY - 14, centerX + 8, reelY - 10, pointerColor);
         gg.fill(centerX - 8, reelY + SLOT_HEIGHT + 10, centerX + 8, reelY + SLOT_HEIGHT + 14, pointerColor);
 
-        if (landedAtMs > 0) {
-            String resultLine = "You got: " + winner.name() + (winner.amount() > 1 ? " x" + winner.amount() : "");
-            drawCentered(gg, resultLine, centerX, reelY + SLOT_HEIGHT + 34, 0xFFFFD54A);
-            drawCentered(gg, "Click or press any key to continue", centerX, reelY + SLOT_HEIGHT + 50, 0xFFAAAAAA);
-
-            if (now - landedAtMs >= AUTO_CLOSE_AFTER_MS) {
-                closeThisScreen();
-            }
+        if (landedAtMs > 0) {  
+            String resultLine = "You got: " + winner.name() + (winner.amount() > 1 ? " x" + winner.amount() : "");  
+            drawCentered(gg, resultLine, centerX, reelY + SLOT_HEIGHT + 34, 0xFFFF5555);  
+  
+            if (totalProfit > 0) {  
+                drawCentered(gg, "Profit: " + Format.compact(totalProfit) + " coins",  
+                    centerX, reelY + SLOT_HEIGHT + 50, 0xFF55FF55);  
+            }  
+  
+            drawCentered(gg, "SO close to " + jackpot.name() + "...",  
+                centerX, reelY + SLOT_HEIGHT + 66, 0xFFFFD54A);  
+            drawCentered(gg, "Click or press any key to continue",  
+                centerX, reelY + SLOT_HEIGHT + 82, 0xFFAAAAAA);  
+  
+            if (now - landedAtMs >= AUTO_CLOSE_AFTER_MS) {  
+                closeThisScreen();  
+            }  
         } else {
             drawCentered(gg, "Opening Vanguard Corpse...", centerX, reelY - 34, 0xFFFFFFFF);
         }
@@ -222,10 +337,10 @@ public final class CorpseOpeningScreen extends Screen {
     }
 
     /** Deterministic-ish color per item name so repeats in the reel look consistent, tinted by relative value. */
-    private int colorFor(RewardEntry entry) {
-        double relative = winner.totalValue() > 0
-            ? Math.min(1.0, entry.totalValue() / winner.totalValue())
-            : (entry == winner ? 1.0 : 0.3);
+    private int colorFor(RewardEntry entry) {  
+        double relative = jackpot.totalValue() > 0  
+            ? Math.min(1.0, entry.totalValue() / jackpot.totalValue())  
+            : (entry == jackpot ? 1.0 : 0.3);
 
         // Low value -> gray, high value -> deep purple/gold, similar to rarity banding.
         int lowR = 0x3A, lowG = 0x3A, lowB = 0x40;
@@ -238,11 +353,9 @@ public final class CorpseOpeningScreen extends Screen {
     }
 
     /** easeOutBack: fast spin that decelerates and slightly overshoots before settling on the target. */
-    private static double easeOutBack(double t) {
-        double c1 = 1.70158;
-        double c3 = c1 + 1;
-        double u = t - 1;
-        return 1 + c3 * u * u * u + c1 * u * u;
+    private static double easeOutQuint(double t) {  
+        double u = 1 - t;  
+        return 1 - u * u * u * u * u;  
     }
 
     @Override

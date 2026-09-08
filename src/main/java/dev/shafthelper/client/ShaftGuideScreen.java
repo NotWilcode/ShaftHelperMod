@@ -1,12 +1,12 @@
 package dev.shafthelper.client;  
   
-import java.util.ArrayList;  
-import java.util.List;  
-  
-import dev.shafthelper.ui.GuideText;  
-import net.minecraft.client.gui.GuiGraphicsExtractor;  
-import net.minecraft.client.gui.components.Button;  
-import net.minecraft.client.gui.screens.Screen;  
+import java.util.ArrayList;
+import java.util.List;
+
+import dev.shafthelper.ui.GuideText;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;  
 import net.minecraft.util.FormattedCharSequence;  
   
@@ -83,6 +83,7 @@ public final class ShaftGuideScreen extends Screen {
   
     private void addBottomButtons() {  
         int bw = 90;  
+    
         int y = panelBottom + 6;  
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())  
             .bounds((this.width - bw) / 2, y, bw, FIELD_HEIGHT).build());  

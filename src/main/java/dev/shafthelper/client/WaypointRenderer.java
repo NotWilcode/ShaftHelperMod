@@ -45,7 +45,7 @@ public final class WaypointRenderer {
     private static final Map<Waypoint, Integer> displayColors = new HashMap<>();  
     private static boolean initialized = false;  
     private static final List<Waypoint> visibleWaypoints = new ArrayList<>();  
-    private static final RenderType THROUGH_LINES = WaypointRenderTypeFactory.createThroughLines();  
+    private static final RenderType THROUGH_LINES = (RenderType) WaypointRenderTypeFactory.createThroughLines();  
   
     private static final KeyMapping.Category SHAFTHELPER_CATEGORY = KeyMapping.Category.register(
         Identifier.fromNamespaceAndPath("shafthelper", "shafthelper_category")

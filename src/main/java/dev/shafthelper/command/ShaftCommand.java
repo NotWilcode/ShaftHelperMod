@@ -1,6 +1,7 @@
 package dev.shafthelper.command;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -19,7 +20,6 @@ import dev.shafthelper.core.HttpFetcher;
 import dev.shafthelper.core.Prices;
 import dev.shafthelper.core.ShaftOptions;
 import dev.shafthelper.core.ShaftSuggestions;
-import dev.shafthelper.ui.GuideText;
 import dev.shafthelper.ui.ShaftText;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -43,6 +43,8 @@ public final class ShaftCommand {
                     .executes(context -> openConfig(context.getSource())))  
                 .then(ClientCommands.literal("waypoints")  
                     .executes(context -> openWaypoints(context.getSource())))  
+                .then(ClientCommands.literal("corpseopener")  
+                    .executes(context -> openCorpseOpener(context.getSource())))
                 .then(ClientCommands.literal("ping")  
                     .then(ClientCommands.argument("ms", IntegerArgumentType.integer(0))  
                         .executes(context -> setPing(context.getSource(), IntegerArgumentType.getInteger(context, "ms")))))  
@@ -90,6 +92,34 @@ public final class ShaftCommand {
         // Queued so it opens after the chat screen closes itself at the end of the command.
         source.getClient().schedule(() -> source.getClient().setScreen(new WaypointsScreen()));
         return 1;
+    }
+
+    /** Rolls one reward from the real Vanguard weight table (for /shaft corpseopener testing). */  
+    public static Map<String, Long> rollRandomReward() {  
+        int totalWeight = 0;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) totalWeight += d.weight();  
+  
+        int roll = new Random().nextInt(totalWeight);  
+        int cursor = 0;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
+            cursor += d.weight();  
+            if (roll < cursor) {  
+                java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
+                m.put(d.name(), d.amount());  
+                return m;  
+            }  
+        }  
+        java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
+        VanguardDrop d = VANGUARD_LOOT_TABLE.get(0);  
+        m.put(d.name(), d.amount());  
+        return m;  
+    }
+
+    private static int openCorpseOpener(FabricClientCommandSource source) {  
+        Map<String, Long> rolled = dev.shafthelper.client.CorpseOpeningScreen.rollRandomReward();  
+        source.getClient().schedule(() -> source.getClient().setScreen(  
+            new dev.shafthelper.client.CorpseOpeningScreen(rolled, ShaftTracker::corpseItemUnitPrice)));  
+        return 1;  
     }
 
     private static int setPing(FabricClientCommandSource source, int ping) {

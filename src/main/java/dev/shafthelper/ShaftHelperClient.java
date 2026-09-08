@@ -61,6 +61,7 @@ public class ShaftHelperClient implements ClientModInitializer {
         WaypointRenderer.register();
         KeyMappingHelper.registerKeyMapping(WaypointRenderer.JUMP_KEY);  
         CorpseFinder.register();
+        new dev.shafthelper.client.CorpseLootAnimationHandler(null).register();
         NetworkTracker.register();
         MiningCalculator.register();
         TickDisplay.register();
