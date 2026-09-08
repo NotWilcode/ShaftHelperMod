@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDate;
 import dev.shafthelper.core.Cold;
 import dev.shafthelper.core.Prices;
 import java.io.IOException;
@@ -77,5 +78,31 @@ class ModConfigTest {
         ModConfig config = ModConfig.load(path);
         assertEquals(0, config.miningSpeed);
         assertTrue(config.autoStats);
+    }
+
+    @Test
+    void seasonalDatesLockTheTheme() {
+        ModConfig config = new ModConfig();
+
+        config.applyTheme(ModConfig.THEME_MIDNIGHT);
+        config.applySeasonalTheme(LocalDate.of(2026, 12, 25));
+        assertEquals(ModConfig.THEME_CHRISTMAS, config.guiTheme);
+
+        config.applyTheme(ModConfig.THEME_MIDNIGHT);
+        config.applySeasonalTheme(LocalDate.of(2026, 10, 31));
+        assertEquals(ModConfig.THEME_HALLOWEEN, config.guiTheme);
+
+        config.applyTheme(ModConfig.THEME_MIDNIGHT);
+        config.applySeasonalTheme(LocalDate.of(2026, 4, 1));
+        assertEquals(ModConfig.THEME_APRILFOOLS, config.guiTheme);
+    }
+
+    @Test
+    void aprilFoolsPaletteIsDeliberatelyUnreadable() {
+        ModConfig config = new ModConfig();
+        config.applyTheme(ModConfig.THEME_APRILFOOLS);
+
+        assertEquals(config.themeBg & 0x00FFFFFF, config.themeText & 0x00FFFFFF);
+        assertEquals(0x00FF00, config.themeBorder & 0x00FFFFFF);
     }
 }

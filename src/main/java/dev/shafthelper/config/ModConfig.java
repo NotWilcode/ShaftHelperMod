@@ -3,6 +3,8 @@ package dev.shafthelper.config;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.MonthDay;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +29,10 @@ public final class ModConfig {
     public static final String THEME_SUNSET = "sunset";
     public static final String THEME_AURORA = "aurora";
     public static final String THEME_FOREST = "forest";
+    public static final String THEME_GAMBLER = "gambler";
+    public static final String THEME_CHRISTMAS = "christmas";
+    public static final String THEME_HALLOWEEN = "halloween";
+    public static final String THEME_APRILFOOLS = "april fools";
 
     public String guiTheme = THEME_MIDNIGHT;
     public int themeBg = 0xE00D1B2A;
@@ -59,6 +65,8 @@ public final class ModConfig {
     public boolean trackerEnabled = true;
     public boolean logEnabled = true;
     public boolean profitEnabled = true;
+    public boolean corpseOpeningAnimationEnabled = true;
+    public boolean corpseSpawningAnimationEnabled = true;
     public boolean enableDustParticles = true;
     public boolean enableDebugOverlay = false;
     public boolean enableNetwork = true;
@@ -149,13 +157,21 @@ public final class ModConfig {
         }
 
         String normalized = guiTheme.toLowerCase(Locale.ROOT);
-        if (Map.of(THEME_MIDNIGHT, 1, THEME_SUNSET, 1, THEME_FOREST, 1, THEME_AURORA, 1).containsKey(normalized)) {
+        if (Map.of(THEME_MIDNIGHT, 1, THEME_SUNSET, 1, THEME_FOREST, 1, THEME_AURORA, 1, THEME_GAMBLER, 1, THEME_CHRISTMAS, 1, THEME_HALLOWEEN, 1, THEME_APRILFOOLS, 1).containsKey(normalized)) {
             applyTheme(normalized);
         }
+
+        applySeasonalTheme(LocalDate.now());
     }
 
     public void cycleTheme() {
-        List<String> order = List.of(THEME_MIDNIGHT, THEME_SUNSET, THEME_FOREST, THEME_AURORA);
+        String seasonalTheme = seasonalTheme(LocalDate.now());
+        if (seasonalTheme != null) {
+            applyTheme(seasonalTheme);
+            return;
+        }
+
+        List<String> order = List.of(THEME_MIDNIGHT, THEME_SUNSET, THEME_FOREST, THEME_AURORA, THEME_GAMBLER);
         int index = order.indexOf(guiTheme);
         if (index < 0) index = 0;
         applyTheme(order.get((index + 1) % order.size()));
@@ -166,7 +182,8 @@ public final class ModConfig {
             THEME_MIDNIGHT,
             THEME_SUNSET,
             THEME_FOREST,
-            THEME_AURORA
+            THEME_AURORA,
+            THEME_GAMBLER
         );
         int index = order.indexOf(guiTheme);
         if (index < 0) index = 0;
@@ -200,6 +217,38 @@ public final class ModConfig {
                 themeText = 0xFFEAFBFF;
                 themeTextOff = 0xFF7FB0B7;
             }
+            case THEME_GAMBLER -> {
+                guiTheme = THEME_GAMBLER;
+                themeBg = 0xE0271610;
+                themeBorder = 0xFF6E4B1F;
+                themeAccent = 0xFFFFC857;
+                themeText = 0xFFFFF3D1;
+                themeTextOff = 0xFFB68B4C;
+            }
+            case THEME_CHRISTMAS -> {
+                guiTheme = THEME_CHRISTMAS;
+                themeBg = 0xE01B2521;
+                themeBorder = 0xFF8E2F35;
+                themeAccent = 0xFFE0B24B;
+                themeText = 0xFFF5F0D7;
+                themeTextOff = 0xFF8FB7A1;
+            }
+            case THEME_HALLOWEEN -> {
+                guiTheme = THEME_HALLOWEEN;
+                themeBg = 0xE022142B;
+                themeBorder = 0xFF6A2C70;
+                themeAccent = 0xFFFF8A24;
+                themeText = 0xFFFFE9C7;
+                themeTextOff = 0xFFB66B92;
+            }
+            case THEME_APRILFOOLS -> {
+                guiTheme = THEME_APRILFOOLS;
+                themeBg = 0xE0FF00FF;
+                themeBorder = 0xFF00FF00;
+                themeAccent = 0xFFFFFF00;
+                themeText = 0xFFFF00FF;
+                themeTextOff = 0xFFFF00FF;
+            }
             default -> {
                 guiTheme = THEME_MIDNIGHT;
                 themeBg = 0xE00D1B2A;
@@ -209,6 +258,22 @@ public final class ModConfig {
                 themeTextOff = 0xFF6B7280;
             }
         }
+    }
+
+    public void applySeasonalTheme(LocalDate date) {
+        String seasonalTheme = seasonalTheme(date);
+        if (seasonalTheme != null) {
+            applyTheme(seasonalTheme);
+        }
+    }
+
+    private static String seasonalTheme(LocalDate date) {
+        if (date == null) return null;
+        MonthDay monthDay = MonthDay.from(date);
+        if (MonthDay.of(12, 25).equals(monthDay)) return THEME_CHRISTMAS;
+        if (MonthDay.of(10, 31).equals(monthDay)) return THEME_HALLOWEEN;
+        if (MonthDay.of(4, 1).equals(monthDay)) return THEME_APRILFOOLS;
+        return null;
     }
 
     public void save(Path path) {

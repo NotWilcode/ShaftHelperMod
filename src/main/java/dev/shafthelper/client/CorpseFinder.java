@@ -57,6 +57,8 @@ public final class CorpseFinder {
     private static String currentShaftCode = "";  
     private static final Set<String> clearedCandidates = new HashSet<>(); // "x,y,z"  
     private static final Set<Long> loggedPositions = new HashSet<>();  
+    private static final int SCAN_INTERVAL_TICKS = 5;
+    private static int scanTicks = 0;
   
     public static void register() {  
         ClientTickEvents.END_CLIENT_TICK.register(CorpseFinder::scan);  
@@ -84,6 +86,7 @@ public final class CorpseFinder {
             return;  
         }  
   
+        if (++scanTicks % SCAN_INTERVAL_TICKS != 0) return;
         var player = client.player;  
   
         // Reset checkpoint state when the shaft changes.  

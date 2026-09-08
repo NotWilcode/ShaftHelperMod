@@ -51,7 +51,7 @@ private final ModConfig config = ShaftTracker.config();
     private int selectedPreset = 0;
   
     // Tab state (class-level, NOT inside init())  
-    private enum Tab { STATS, HUD, OPTIONS, WAYPOINTS }  
+    private enum Tab { STATS, HUD, OPTIONS, COSMETIC, WAYPOINTS }  
     private Tab activeTab = Tab.STATS;  
     private long tabSwitchTime = 0L; // for animation  
     private static final long ANIM_MS = 160L;
@@ -128,6 +128,7 @@ private final ModConfig config = ShaftTracker.config();
             case STATS -> buildStats(y);  
             case HUD -> buildHUD(y);  
             case OPTIONS -> buildOptions(y);  
+            case COSMETIC -> buildCosmetic(y);
             case WAYPOINTS -> buildWaypoints(y);  
         };
   
@@ -167,6 +168,7 @@ private final ModConfig config = ShaftTracker.config();
             case STATS -> "Stats";  
             case HUD -> "HUD";  
             case OPTIONS -> "Options";  
+            case COSMETIC -> "Cosmetic";
             case WAYPOINTS -> "Waypoints";  
         };  
     }  
@@ -176,6 +178,7 @@ private final ModConfig config = ShaftTracker.config();
             case STATS -> 10;  
             case HUD -> 13;
             case OPTIONS -> 3;  
+            case COSMETIC -> 4;
             case WAYPOINTS -> 6;  
         };  
         return HEADER_HEIGHT + rows * ROW_HEIGHT;  
@@ -309,13 +312,30 @@ private final ModConfig config = ShaftTracker.config();
         addLabel("Benchmark", y);  
         y += ROW_HEIGHT;
             
-        tabContent.add(addRenderableWidget(new StyledToggle(
-            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
-            config.enableDustParticles, v -> config.enableDustParticles = v)));  
-        addLabel("Power Coating / Glacial", y);  
-        y += ROW_HEIGHT;  
-    
         return y;  
+    }
+
+    private int buildCosmetic(int y) {
+        y = section("Cosmetic", y);
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.corpseOpeningAnimationEnabled, v -> config.corpseOpeningAnimationEnabled = v)));
+        addLabel("Corpse Opening animation", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.corpseSpawningAnimationEnabled, v -> config.corpseSpawningAnimationEnabled = v)));
+        addLabel("Corpse spawning animation", y);
+        y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledToggle(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            config.enableDustParticles, v -> config.enableDustParticles = v)));
+        addLabel("Power Coating / Glacial", y);
+        y += ROW_HEIGHT;
+
+        return y;
     }
   
     private int buildWaypoints(int y) {  

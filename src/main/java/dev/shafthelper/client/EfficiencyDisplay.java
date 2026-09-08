@@ -17,12 +17,17 @@ public final class EfficiencyDisplay implements HudElement {
     private static boolean initialized = false;
     
     // Tracking data
-    private static long timeStarted = 0;
-    private static int blocksMined = 0;
-    private static int expectedBlocks = 0;
-    private static long lastMineTime = 0;
-    private static double idealElapsedMs = 0;
     private static final int TIMEOUT_SECONDS = 30;
+    private static long timeStarted = 0;
+    private static long lastMineTime = 0;
+    private static float lastUptime = Float.NaN;  
+    private static int lastEfficiency = Integer.MIN_VALUE;  
+    private static int lastPingEff = Integer.MIN_VALUE;
+    private static int blocksMined = 0;
+    private static int expectedBlocks = 0;  
+    private static double idealElapsedMs = 0;
+    private static double lastMsPerTick = Double.NaN;  
+    private static Component uptimeComp, effComp, pingEffComp, msPerTickComp;
 
     public static void register() {
         if (!initialized) {
@@ -91,26 +96,36 @@ public final class EfficiencyDisplay implements HudElement {
         int y = position(config.effY, graphics.guiHeight(), boxH);
         int inset = Math.max(1, (int) Math.round(2 * config.effScale));
         int lineStep = Math.max(1, (int) Math.round(10 * config.effScale));
+
+        int text = ShaftTracker.config().themeText;
         
         float uptime = getUptime();
         int efficiency = getEfficiency();
+        int pingEff = MiningCalculator.getPingEfficiency();
+        double getMsPerTick = ServerStats.getMsPerTick();
         
         // Draw uptime
-        String uptimeText = String.format("Uptime: %.1fs", uptime);
-        graphics.text(font, Component.literal(uptimeText), x + inset, y + inset, 0xFF55FFFF, true);
-        
-        // Draw efficiency
-        String effText = String.format("Efficiency: %d%%", efficiency);
-        graphics.text(font, Component.literal(effText), x + inset, y + lineStep, 0xFF55FFFF, true);
+        if (uptime != lastUptime || uptimeComp == null) {
+            uptimeComp = Component.literal(String.format("Uptime: %.1fs", uptime));
+            lastUptime = uptime;
+        }
+        if (efficiency != lastEfficiency || effComp == null) {
+            effComp = Component.literal(String.format("Efficiency: %d%%", efficiency));
+            lastEfficiency = efficiency;
+        }
+        if (pingEff != lastPingEff || pingEffComp == null) {
+            pingEffComp = Component.literal(String.format("Ping Eff: %d%%", pingEff));
+            lastPingEff = pingEff;
+        }
+        if (getMsPerTick != lastMsPerTick || msPerTickComp == null) {
+            msPerTickComp = Component.literal(String.format("ms/tick: %.1f", getMsPerTick));
+            lastMsPerTick = getMsPerTick;
+        }
 
-        // Draw ping-limited efficiency (theoretical cap from latency)  
-        int pingEff = MiningCalculator.getPingEfficiency();  
-        String pingEffText = String.format("Ping Eff: %d%%", pingEff);  
-        graphics.text(font, Component.literal(pingEffText), x + inset, y + lineStep * 2, 0xFF55FFFF, true);
-
-        double getMsPerTick = ServerStats.getMsPerTick();
-        String msPerTickText = String.format("ms/tick: %.1f", getMsPerTick);
-        graphics.text(font, Component.literal(msPerTickText), x + inset, y + lineStep * 3, 0xFF55FFFF, true);
+        graphics.text(font, uptimeComp, x + inset, y + inset, text, true);
+        graphics.text(font, effComp, x + inset, y + lineStep, text, true);
+        graphics.text(font, pingEffComp, x + inset, y + lineStep * 2, text, true);
+        graphics.text(font, msPerTickComp, x + inset, y + lineStep * 3, text, true);
     }
 
     static int position(double percent, int screen, int size) {

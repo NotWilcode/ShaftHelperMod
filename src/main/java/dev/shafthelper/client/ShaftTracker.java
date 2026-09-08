@@ -215,9 +215,7 @@ public final class ShaftTracker {
             leftMiningScans = 0;  
         }  
     
-        Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);  
-        readLapisCorpses(lines);
-        detectedArea = AreaDetector.detect(lines);
+        Optional<ShaftDetector.Shaft> shaft = ShaftDetector.detect(lines);
         
         // Check if shaft status changed (entered, left, or switched)
         if (shaft.isPresent() && !detectedShaft.isPresent()) {
@@ -255,8 +253,10 @@ public final class ShaftTracker {
 
         applyMineshaftGroupToggle();
 
-        if (config.trackerEnabled && config.miningSpeed > 0) refreshPrices();
+        if (config.trackerEnabled && config.miningSpeed > 0) {
+            refreshPrices();
             refreshHudLines();
+        }
     }
 
     public static Optional<ShaftDetector.Shaft> currentShaft() {

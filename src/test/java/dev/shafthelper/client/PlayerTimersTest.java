@@ -59,6 +59,8 @@ class PlayerTimersTest {
         config.cycleTheme();
         assertEquals("aurora", config.guiTheme);
         assertEquals(0xE0122338, config.themeBg);
+        assertEquals("gambler", config.nextThemeId());
+        config.cycleTheme();
         assertEquals("midnight", config.nextThemeId());
     }
 }
