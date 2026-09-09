@@ -36,12 +36,13 @@ public abstract class ConnectionMixin implements NetworkSequenceTracker {
     private void shaftHelper$onSend(Packet<?> packet, CallbackInfo ci) {
         if (packet instanceof ServerboundPlayerActionPacket action) {
             long sentWallMs = System.currentTimeMillis();
+            long sentNanoTime = System.nanoTime();
             shaftHelper$pendingActions.put(action.getSequence(), new ShaftHelperPendingAction(
-                action.getAction(), action.getPos(), action.getDirection(), System.nanoTime()));
+                action.getAction(), action.getPos(), action.getDirection(), sentNanoTime));
 
             Runnable clientAction = () ->
                     dev.shafthelper.client.MiningCalculator.onClientActionSent(
-                            action.getAction(), action.getPos(), sentWallMs);
+                            action.getAction(), action.getPos(), sentWallMs, sentNanoTime);
             if (Minecraft.getInstance().isSameThread()) {
                 clientAction.run();
             } else {

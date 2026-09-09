@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import dev.shafthelper.core.ShaftSpawnTracker;
+import dev.shafthelper.client.EfficiencyDisplay;
 
 /**
  * Mineshaft profit / acceptance calculator.
@@ -338,7 +339,7 @@ public final class MiningCalc {
                     Comparator
                         .comparingDouble(
                             (ShaftState state) ->
-                                state.effectiveCoinsPerHour(efficiency)
+                                state.effectiveCoinsPerHour(EfficiencyDisplay.getEfficiency())
                         )
                         .reversed()
                 )

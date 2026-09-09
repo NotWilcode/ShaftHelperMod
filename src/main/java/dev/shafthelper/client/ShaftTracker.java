@@ -105,12 +105,12 @@ public final class ShaftTracker {
   
     /** Corpse-loot display name -> current Bazaar unit price, or null if unknown. */  
     public static Double corpseItemUnitPrice(String displayName) {  
-        Map<String, Double> current = prices;  
-        if (current == null || displayName == null) return null;  
-        String id = DropTracker.idFor(displayName);  
+        Map<String, Double> p = prices;  
+        if (p == null) { refreshPrices(); return null; }  
+        String id = dev.shafthelper.core.DropTracker.idFor(displayName);  
         if (id == null) return null;  
-        Double price = current.get(id);  
-        return (price != null && Double.isFinite(price) && price > 0) ? price : null;  
+        Double v = p.get(id);  
+        return (v != null && Double.isFinite(v) && v > 0) ? v : null;  
     }
 
     public static List<Component> trackerLines() { return trackerLines; }
@@ -497,7 +497,7 @@ public final class ShaftTracker {
                             effectiveGemstoneSpread(),
                             config.pristine,
                             effectiveColdResistance(),
-                            config.efficiency,
+                            EfficiencyDisplay.getEfficiency(),
                             spawnCoinsPerHour,
                             spawnMinutes
                         );
@@ -600,7 +600,7 @@ public final class ShaftTracker {
                 effectiveGemstoneSpread(),
                 config.pristine,
                 effectiveColdResistance(),
-                config.efficiency,
+                EfficiencyDisplay.getEfficiency(),
                 spawnCoinsPerHour,
                 spawnMinutes
             );

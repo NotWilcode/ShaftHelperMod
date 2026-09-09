@@ -123,6 +123,7 @@ public final class ModConfig {
     
     /** Network settings for mining calculator */
     public int configuredPing = 50; // Default ping in ms
+    public int reactionTimeAdjustment = 0;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

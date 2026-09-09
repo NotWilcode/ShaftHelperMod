@@ -46,8 +46,10 @@ public final class ShaftCommand {
                 .then(ClientCommands.literal("corpseopener")  
                     .executes(context -> openCorpseOpener(context.getSource())))
                 .then(ClientCommands.literal("ping")  
+                    .then(ClientCommands.literal("calibrate")  
+                        .executes(context -> calibratePing(context.getSource())))  
                     .then(ClientCommands.argument("ms", IntegerArgumentType.integer(0))  
-                        .executes(context -> setPing(context.getSource(), IntegerArgumentType.getInteger(context, "ms")))))  
+                        .executes(context -> setPing(context.getSource(), IntegerArgumentType.getInteger(context, "ms")))))
                 .then(ClientCommands.literal("miningspeed")  
                     .then(ClientCommands.argument("speed", IntegerArgumentType.integer(1))  
                         .executes(context -> setMiningSpeed(context.getSource(), IntegerArgumentType.getInteger(context, "speed")))))  
@@ -94,27 +96,6 @@ public final class ShaftCommand {
         return 1;
     }
 
-    /** Rolls one reward from the real Vanguard weight table (for /shaft corpseopener testing). */  
-    public static Map<String, Long> rollRandomReward() {  
-        int totalWeight = 0;  
-        for (VanguardDrop d : VANGUARD_LOOT_TABLE) totalWeight += d.weight();  
-  
-        int roll = new Random().nextInt(totalWeight);  
-        int cursor = 0;  
-        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
-            cursor += d.weight();  
-            if (roll < cursor) {  
-                java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
-                m.put(d.name(), d.amount());  
-                return m;  
-            }  
-        }  
-        java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
-        VanguardDrop d = VANGUARD_LOOT_TABLE.get(0);  
-        m.put(d.name(), d.amount());  
-        return m;  
-    }
-
     private static int openCorpseOpener(FabricClientCommandSource source) {  
         Map<String, Long> rolled = dev.shafthelper.client.CorpseOpeningScreen.rollRandomReward();  
         source.getClient().schedule(() -> source.getClient().setScreen(  
@@ -127,6 +108,12 @@ public final class ShaftCommand {
         source.sendFeedback(Component.literal("Ping set to " + ping + "ms")
             .withStyle(ChatFormatting.GREEN));
         return 1;
+    }
+
+    private static int calibratePing(FabricClientCommandSource source) {  
+        source.getClient().schedule(() -> source.getClient()
+            .setScreen(new dev.shafthelper.client.ReactionCalibrationScreen()));
+        return 1;  
     }
 
     private static int setMiningSpeed(FabricClientCommandSource source, int speed) {

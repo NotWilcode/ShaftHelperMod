@@ -177,7 +177,7 @@ private final ModConfig config = ShaftTracker.config();
         int rows = switch (t) {  
             case STATS -> 10;  
             case HUD -> 12;
-            case OPTIONS -> 3;  
+            case OPTIONS -> 5;  
             case COSMETIC -> 5;
             case WAYPOINTS -> 6;  
         };  
@@ -234,6 +234,7 @@ private final ModConfig config = ShaftTracker.config();
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,  
             config.profitEnabled, v -> config.profitEnabled = v)));  
+        tabContent.get(tabContent.size() - 1).active = !ModConfig.THEME_GAMBLER.equalsIgnoreCase(config.guiTheme);
         addLabel("Profit overlay", y);  
         y += ROW_HEIGHT;  
     
@@ -301,6 +302,16 @@ private final ModConfig config = ShaftTracker.config();
             config.benchmark, v -> config.benchmark = v)));  
         addLabel("Benchmark", y);  
         y += ROW_HEIGHT;
+
+        tabContent.add(addRenderableWidget(new StyledButton(
+            fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
+            Component.literal("Reaction test"),
+            b -> this.minecraft.setScreen(new ReactionCalibrationScreen()))));
+        addLabel("Calibrate reaction", y);
+        y += ROW_HEIGHT;
+
+        y = labeledInt("Reaction adjustment (ms)", y, config.reactionTimeAdjustment,
+            v -> config.reactionTimeAdjustment = Math.clamp(v, -500, 500));
             
         return y;  
     }
@@ -321,12 +332,14 @@ private final ModConfig config = ShaftTracker.config();
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
             config.corpseOpeningAnimationEnabled, v -> config.corpseOpeningAnimationEnabled = v)));
+        tabContent.get(tabContent.size() - 1).active = !ModConfig.THEME_GAMBLER.equalsIgnoreCase(config.guiTheme);
         addLabel("Corpse Opening animation", y);
         y += ROW_HEIGHT;
 
         tabContent.add(addRenderableWidget(new StyledToggle(
             fieldX, y, FIELD_WIDTH, FIELD_HEIGHT,
             config.corpseSpawningAnimationEnabled, v -> config.corpseSpawningAnimationEnabled = v)));
+        tabContent.get(tabContent.size() - 1).active = !ModConfig.THEME_GAMBLER.equalsIgnoreCase(config.guiTheme);
         addLabel("Corpse spawning animation", y);
         y += ROW_HEIGHT;
 
@@ -433,7 +446,7 @@ private final ModConfig config = ShaftTracker.config();
     }  
   
     private void addIntField(int x, int y, int initial, IntConsumer setter) {  
-        addNumberField(x, y, initial > 0 ? String.valueOf(initial) : "", value -> {  
+        addNumberField(x, y, initial != 0 ? String.valueOf(initial) : "", value -> {  
             try {  
                 setter.accept(Integer.parseInt(value.trim()));  
             } catch (NumberFormatException ignored) {  

@@ -39,7 +39,7 @@ public final class CorpseLootAnimationHandler {
         Minecraft client = Minecraft.getInstance();  
         client.execute(() -> {  
             if (client.screen == null) {  
-                client.setScreen(new CorpseOpeningScreen(loot.rewards(), priceLookup));  
+                client.setScreen(new CorpseOpeningScreen(loot.rewards(), ShaftTracker::corpseItemUnitPrice));  
             }  
         });  
     }  

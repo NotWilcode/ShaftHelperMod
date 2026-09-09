@@ -123,6 +123,27 @@ public final class CorpseOpeningScreen extends Screen {
         }  
         return best;  
     }  
+    
+    /** Rolls one reward from the real Vanguard weight table (for /shaft corpseopener testing). */  
+    public static Map<String, Long> rollRandomReward() {  
+        int totalWeight = 0;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) totalWeight += d.weight();  
+  
+        int roll = new Random().nextInt(totalWeight);  
+        int cursor = 0;  
+        for (VanguardDrop d : VANGUARD_LOOT_TABLE) {  
+            cursor += d.weight();  
+            if (roll < cursor) {  
+                java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
+                m.put(d.name(), d.amount());  
+                return m;  
+            }  
+        }  
+        java.util.LinkedHashMap<String, Long> m = new java.util.LinkedHashMap<>();  
+        VanguardDrop d = VANGUARD_LOOT_TABLE.get(0);  
+        m.put(d.name(), d.amount());  
+        return m;  
+    }
   
     /** Real bazaar coins for the whole corpse, skipping items with no known price. */  
     private static double coinValueOf(Map<String, Long> rewards, Function<String, Double> priceLookup) {  
@@ -292,7 +313,7 @@ public final class CorpseOpeningScreen extends Screen {
         if (landedAtMs > 0) {  
             String resultLine = "You got: " + winner.name() + (winner.amount() > 1 ? " x" + winner.amount() : "");  
             drawCentered(gg, resultLine, centerX, reelY + SLOT_HEIGHT + 34, 0xFFFF5555);  
-  
+            
             if (totalProfit > 0) {  
                 drawCentered(gg, "Profit: " + Format.compact(totalProfit) + " coins",  
                     centerX, reelY + SLOT_HEIGHT + 50, 0xFF55FF55);  

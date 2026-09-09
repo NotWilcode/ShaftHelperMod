@@ -1,5 +1,9 @@
 package dev.shafthelper.client;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import dev.shafthelper.config.ModConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
@@ -75,6 +79,16 @@ public final class MiningCalculator implements HudElement {
     private static int ticksElapsed = 0;
     private static long mineStartWallMs = 0L;  
     private static long serverRecognizedWallMs = 0L;
+    private static final int MINING_CALIBRATION_SAMPLES = 8;
+    private static final long MAX_LOST_TIME_SAMPLE_MS = 2000L;
+    private static final List<Long> lostTimeSamplesMs = new ArrayList<>();
+    private static boolean miningCalibrationActive;
+    private static BlockPos currentLookedPingGliderBlock;
+    private static BlockPos lastLookedPingGliderBlock;
+    private static boolean calibrationCycleEligible;
+    private static long calibrationStartWallMs;
+    private static double calibrationTicksNeeded;
+    private static long calibrationCompletionWallMs;
 
     public static void register() {
         if (!initialized) {
@@ -99,6 +113,9 @@ public final class MiningCalculator implements HudElement {
             Block block = client.level.getBlockState(blockPos).getBlock();  
             blockHardness = BLOCK_HARDNESSES.get(getSkyblockBlockName(block));  
         }  
+
+        lastLookedPingGliderBlock = currentLookedPingGliderBlock;
+        currentLookedPingGliderBlock = blockHardness != null ? blockPos : null;
 
         // A missed block update must not leave a completed session displayed forever.
         long now = System.currentTimeMillis();
@@ -148,9 +165,9 @@ public final class MiningCalculator implements HudElement {
             serverMsPerTick = 50.0; // Fallback to default
         }
 
-        clientTicksElapsed = Math.clamp(elapsedMs / serverMsPerTick, 0.0, ticksNeeded);
+        clientTicksElapsed = Math.max(elapsedMs / serverMsPerTick, 0.0);
 
-        double pingMs = Math.max(0.0, ServerStats.getPing());
+        double pingMs = effectivePingMs();
         double oneWayPingMs = pingMs / 2.0;
         double serverElapsedMs = Math.max(0.0, elapsedMs - oneWayPingMs);
 
@@ -218,7 +235,8 @@ public final class MiningCalculator implements HudElement {
 
     public static void onClientActionSent(ServerboundPlayerActionPacket.Action action,
                                           BlockPos blockPos,
-                                          long sentWallMs) {
+                                          long sentWallMs,
+                                          long sentNanoTime) {
         if (action != ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) return;
 
         Minecraft client = Minecraft.getInstance();
@@ -233,6 +251,18 @@ public final class MiningCalculator implements HudElement {
         }
 
         if (!blockPos.equals(currentBlock)) return;
+
+        boolean eligibleStart = miningCalibrationActive
+            && client.options.keyAttack.isDown()
+            && blockPos.equals(currentLookedPingGliderBlock)
+            && lastLookedPingGliderBlock != null
+            && !blockPos.equals(lastLookedPingGliderBlock);
+        if (calibrationCompletionWallMs > 0L && eligibleStart) {
+            recordMiningCalibrationSample();
+        }
+        calibrationCycleEligible = eligibleStart;
+        calibrationStartWallMs = eligibleStart ? sentWallMs : 0L;
+        calibrationTicksNeeded = eligibleStart ? ticksNeeded : 0.0;
 
         miningBlock = blockPos;
         mineStartWallMs = sentWallMs;
@@ -257,11 +287,17 @@ public final class MiningCalculator implements HudElement {
         if (action == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK
                 && blockPos.equals(miningBlock)) {
             serverRecognizedWallMs = System.currentTimeMillis();
+            if (calibrationCycleEligible) {
+                calibrationCompletionWallMs = serverRecognizedWallMs;
+            }
             return;
         }
 
         if (action == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK
                 && blockPos.equals(miningBlock)) {
+            calibrationCycleEligible = false;
+            calibrationStartWallMs = 0L;
+            calibrationCompletionWallMs = 0L;
             onBlockMined();
         }
     }
@@ -320,7 +356,7 @@ public final class MiningCalculator implements HudElement {
         }
 
         double serverBreakMs = ticksNeeded * serverMsPerTick;
-        double pingMs = Math.max(0.0, ServerStats.getPing());
+        double pingMs = effectivePingMs();
 
         return Math.max(0.0, serverBreakMs - pingMs);
     }
@@ -337,12 +373,27 @@ public final class MiningCalculator implements HudElement {
         return computeGlideMs(ticksNeeded) / serverMsPerTick;
     }
 
-    /** Effective ticks to break including network latency (notes' breakEfficiency formula). */  
-    public static double computeEffectiveTicks(double ticks) {  
-        double pingTicks = Math.max(0.0, ServerStats.getPing()) / 50.0;  
-
+    /** Measured ping (ms) combined with the calibrated additive offset from config. */  
+    public static double effectivePingMs() {  
+        double base = Math.max(0.0, ServerStats.getPing());  
+        int offset = 0;
+        if (ShaftTracker.config() != null) {
+            ModConfig config = ShaftTracker.config();
+            offset = config.configuredPing + config.reactionTimeAdjustment;
+        }
+        return Math.max(0.0, base + offset);  
+    }  
+    
+    /** Effective ticks to break including network latency, using a given ping (ms). */  
+    public static double computeEffectiveTicks(double ticks, double pingMs) {  
+        double pingTicks = Math.max(0.0, pingMs) / 50.0;  
         return ticks + pingTicks;  
-    }
+    }  
+    
+    /** No-arg wrapper: uses effective (measured + offset) ping. */  
+    public static double computeEffectiveTicks(double ticks) {  
+        return computeEffectiveTicks(ticks, effectivePingMs());  
+    } 
 
     public static double computeIdealBreakMs(double ticks) {
         if (ticks <= 0.0) return 0.0;
@@ -354,22 +405,106 @@ public final class MiningCalculator implements HudElement {
         }
 
         double serverBreakMs = ticks * serverMsPerTick;
-        double pingMs = Math.max(0.0, ServerStats.getPing());
+        double pingMs = effectivePingMs();
 
         return serverBreakMs + pingMs;
     }
     
     /**  
-     * Theoretical mining efficiency (%) as limited by ping:  
-     * pure break time / (break time + ping). Lower ticksNeeded -> ping hurts more,  
-     * matching the notes' "lower ticksToBreak means higher effect of ping on profit".  
+     * Theoretical mining efficiency (%) as limited by a given ping (ms):  
+     * pure break time / (break time + ping).  
      */  
-    public static int getPingEfficiency() {  
-        double eff = computeEffectiveTicks(ticksNeeded);  
-
+    public static int getPingEfficiency(double pingMs) {  
+        double eff = computeEffectiveTicks(ticksNeeded, pingMs);  
         if (eff <= 0 || ticksNeeded <= 0) return 100;  
-
         return (int) Math.round(ticksNeeded / eff * 100.0);  
+    }  
+    
+    /** No-arg wrapper: uses effective (measured + offset) ping. */  
+    public static int getPingEfficiency() {  
+        return getPingEfficiency(effectivePingMs());  
+    }
+
+    public static int beginMiningCalibration() {
+        lostTimeSamplesMs.clear();
+        miningCalibrationActive = true;
+        calibrationCycleEligible = false;
+        calibrationStartWallMs = 0L;
+        calibrationTicksNeeded = 0.0;
+        calibrationCompletionWallMs = 0L;
+        return MINING_CALIBRATION_SAMPLES;
+    }
+
+    public static boolean isMiningCalibrationActive() {
+        return miningCalibrationActive;
+    }
+
+    public static int getMiningCalibrationSamples() {
+        return lostTimeSamplesMs.size();
+    }
+
+    private static void recordMiningCalibrationSample() {
+        if (!miningCalibrationActive || calibrationStartWallMs <= 0L
+                || calibrationCompletionWallMs <= 0L || calibrationTicksNeeded <= 0.0) return;
+
+        double expectedBreakMs = calibrationTicksNeeded * ServerStats.getWallClockMsPerTick();
+        long observedMs = calibrationCompletionWallMs - calibrationStartWallMs;
+        long lostTimeMs = Math.round(observedMs - expectedBreakMs - ServerStats.getPing());
+        calibrationCompletionWallMs = 0L;
+        if (lostTimeMs < -MAX_LOST_TIME_SAMPLE_MS || lostTimeMs > MAX_LOST_TIME_SAMPLE_MS) return;
+
+        lostTimeSamplesMs.add(lostTimeMs);
+        if (lostTimeSamplesMs.size() < MINING_CALIBRATION_SAMPLES) {
+            Minecraft client = Minecraft.getInstance();
+            if (client.player != null) {
+                client.gui.setOverlayMessage(Component.literal(
+                    "Mining calibration: " + lostTimeSamplesMs.size() + "/"
+                        + MINING_CALIBRATION_SAMPLES + " samples ("
+                        + lostTimeMs + "ms lost-time)"), false);
+            }
+            return;
+        }
+
+        List<Long> sortedSamples = new ArrayList<>(lostTimeSamplesMs);
+        Collections.sort(sortedSamples);
+        long total = 0L;
+        for (long sample : sortedSamples) total += sample;
+        int averageLostTime = (int) Math.round(total / (double) sortedSamples.size());
+        if (ShaftTracker.config() != null) {
+            ShaftTracker.config().configuredPing = averageLostTime;
+            ShaftTracker.saveConfig();
+        }
+        miningCalibrationActive = false;
+        Minecraft client = Minecraft.getInstance();
+        if (client.player != null) {
+            client.gui.setOverlayMessage(
+                Component.literal("Mining calibration applied: " + averageLostTime + "ms lost-time"), false);
+        }
+    }
+
+    public static int calibratePingOffset() {  
+        final int MIN_OFFSET = -200;  
+        final int MAX_OFFSET = 200;  
+        final int STEP = 5;  
+    
+        double basePing = Math.max(0.0, ServerStats.getPing());  
+    
+        int bestOffset = 0;  
+        int bestEff = getPingEfficiency(Math.max(0.0, basePing));  
+    
+        for (int offset = MIN_OFFSET; offset <= MAX_OFFSET; offset += STEP) {  
+            int eff = getPingEfficiency(Math.max(0.0, basePing + offset));  
+            if (eff > bestEff) {  
+                bestEff = eff;  
+                bestOffset = offset;  
+            }  
+        }  
+    
+        if (ShaftTracker.config() != null) {  
+            ShaftTracker.config().configuredPing = bestOffset;  
+            ShaftTracker.saveConfig();  
+        }  
+        return bestOffset;  
     }
 
     private static final int EDGE = 4;

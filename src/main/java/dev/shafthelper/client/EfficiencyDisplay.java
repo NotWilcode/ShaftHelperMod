@@ -21,7 +21,7 @@ public final class EfficiencyDisplay implements HudElement {
     private static long timeStarted = 0;
     private static long lastMineTime = 0;
     private static float lastUptime = Float.NaN;  
-    private static int lastEfficiency = Integer.MIN_VALUE;  
+    private static double lastEfficiency = Integer.MIN_VALUE;  
     private static int lastPingEff = Integer.MIN_VALUE;
     private static int blocksMined = 0;
     private static int expectedBlocks = 0;  
@@ -70,10 +70,13 @@ public final class EfficiencyDisplay implements HudElement {
         return difference / 1000f;
     }
     
-    private static int getEfficiency() {  
-        if (blocksMined == 0) return 100;  
+    public static double getEfficiency() {  
+        if (blocksMined == 0) {
+            ModConfig config = ShaftTracker.config();
+            return config.efficiency;
+        }  
         double actualMs = Math.max(System.currentTimeMillis() - timeStarted, 1);  
-        return Math.clamp((int) Math.round(idealElapsedMs / actualMs * 100.0), 0, 100);  
+        return Math.clamp((double) Math.round(idealElapsedMs / actualMs * 100.0), 0, 100);  
     }
 
     @Override
@@ -100,7 +103,7 @@ public final class EfficiencyDisplay implements HudElement {
         int text = ShaftTracker.config().themeText;
         
         float uptime = getUptime();
-        int efficiency = getEfficiency();
+        double efficiency = getEfficiency();
         int pingEff = MiningCalculator.getPingEfficiency();
         double getMsPerTick = ServerStats.getMsPerTick();
         
@@ -110,11 +113,11 @@ public final class EfficiencyDisplay implements HudElement {
             lastUptime = uptime;
         }
         if (efficiency != lastEfficiency || effComp == null) {
-            effComp = Component.literal(String.format("Efficiency: %d%%", efficiency));
+            effComp = Component.literal(String.format("Efficiency: %.0f%%", (double) efficiency));
             lastEfficiency = efficiency;
         }
         if (pingEff != lastPingEff || pingEffComp == null) {
-            pingEffComp = Component.literal(String.format("Ping Eff: %d%%", pingEff));
+            pingEffComp = Component.literal(String.format("Ping Eff: %.0f%%", (double) pingEff));
             lastPingEff = pingEff;
         }
         if (getMsPerTick != lastMsPerTick || msPerTickComp == null) {
